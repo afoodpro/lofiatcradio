@@ -1,11 +1,11 @@
 {
-    "name": "ATC L",
-    "short_name": "atcradionew",
+    "name": "ATC LIVE RADIO",
+    "short_name": "ATC LIVE",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "ATC LIVE RADIO WITH LOFI",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
