@@ -1,12 +1,12 @@
 {
     "name": "ATC LIVE RADIO",
-    "short_name": "ATC LIVE",
+    "short_name": "ATC LIVE RADIO",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "ATC LIVE RADIO WITH LOFI",
-    "orientation": "portrait-primary",
+    "background_color": "#E4E6E3",
+    "theme_color": "#E4E6E3",
+    "description": "ATC LIVE RADIO WITH LO-FI",
+    "orientation": "portrait",
     "prefer_related_applications": false,
     "icons": [
         {
