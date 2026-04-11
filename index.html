@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Lo-Fi music mixed with live ATC radio. Chill and work.">
+  <title>ATC LIVE RADIO</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📡</text></svg>">
+</head>
+<body>
+
+  <!-- Animated background blobs -->
+  <div class="bg">
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
+  </div>
+
+  <!-- Player card -->
+  <main class="card">
+
+    <!-- Header -->
+    <header class="card-header">
+      <div class="live-badge">
+        <span class="live-dot"></span>
+        LIVE · ATC RADIO
+      </div>
+      <div id="station-code" class="station-code">KJFK</div>
+      <div id="station-name" class="station-name">New York JFK</div>
+    </header>
+
+    <!-- Play/Pause button -->
+    <button id="play-btn" class="play-btn" aria-label="Play">
+      <!-- play icon -->
+      <svg id="icon-play" xmlns="http://www.w3.org/2000/svg" width="28" height="28"
+           viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polygon points="5 3 19 12 5 21 5 3"/>
+      </svg>
+      <!-- pause icon (hidden by default) -->
+      <svg id="icon-pause" xmlns="http://www.w3.org/2000/svg" width="28" height="28"
+           viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+           style="display:none">
+        <rect x="6" y="4" width="4" height="16"/>
+        <rect x="14" y="4" width="4" height="16"/>
+      </svg>
+    </button>
+
+    <!-- ATC Station list -->
+    <ul class="station-list" id="station-list">
+      <li class="station-item active" data-code="KJFK">
+        <span class="station-item-code">KJFK</span>
+        <span class="station-item-name">New York JFK</span>
+      </li>
+      <li class="station-item" data-code="KSFO">
+        <span class="station-item-code">KSFO</span>
+        <span class="station-item-name">San Francisco</span>
+      </li>
+      <li class="station-item" data-code="RJTT">
+        <span class="station-item-code">RJTT</span>
+        <span class="station-item-name">Tokyo Haneda</span>
+      </li>
+      <li class="station-item" data-code="UNNT">
+        <span class="station-item-code">UNNT</span>
+        <span class="station-item-name">Novosibirsk</span>
+      </li>
+      <li class="station-item" data-code="URSS">
+        <span class="station-item-code">URSS</span>
+        <span class="station-item-name">Khabarovsk</span>
+      </li>
+    </ul>
+
+    <!-- Volume sliders -->
+    <div class="volumes">
+      <div class="volume-row">
+        <span class="volume-label">LOFI</span>
+        <input id="lofi-vol" class="slider" type="range" min="0" max="1" step="0.01" value="0.7">
+      </div>
+      <div class="volume-row">
+        <span class="volume-label">ATC</span>
+        <input id="atc-vol" class="slider" type="range" min="0" max="1" step="0.01" value="0.4">
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="card-footer">
+      <a href="https://t.me/a_food" target="_blank" rel="noopener" aria-label="Telegram">
+        <!-- Lucide send icon -->
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18"
+             viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="22" y1="2" x2="11" y2="13"/>
+          <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+        </svg>
+      </a>
+    </footer>
+
+  </main>
+
+  <!-- Audio elements -->
+  <audio id="audio-lofi" preload="none"></audio>
+  <audio id="audio-atc"  preload="none"></audio>
+
+  <script src="app.js"></script>
+</body>
+</html>
