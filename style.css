@@ -79,3 +79,181 @@ body {
   padding: 28px;
   width: 340px;
 }
+
+/* ---- Card header ---- */
+@font-face {
+  font-family: 'Teko';
+  src: url('assets/font/Teko-Regular.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+.live-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: #aaaaaa;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.live-dot {
+  width: 6px;
+  height: 6px;
+  background: #1a1a1a;
+  border-radius: 50%;
+  animation: blink 2s ease-in-out infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.2; }
+}
+
+.station-code {
+  font-family: 'Teko', sans-serif;
+  font-size: 36px;
+  color: #1a1a1a;
+  line-height: 1;
+  letter-spacing: 1px;
+}
+
+.station-name {
+  font-size: 12px;
+  color: #aaaaaa;
+  margin-top: 2px;
+  margin-bottom: 20px;
+}
+
+/* ---- Play button ---- */
+.play-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  background: #1a1a1a;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  margin: 0 auto 24px;
+  color: #ffffff;
+  transition: transform 0.1s ease, background 0.15s ease;
+}
+
+.play-btn:hover  { background: #333333; }
+.play-btn:active { transform: scale(0.95); }
+
+/* ---- Station list ---- */
+.station-list {
+  list-style: none;
+  margin-bottom: 20px;
+}
+
+.station-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.station-item:hover  { background: #f5f0e8; }
+.station-item.active { background: #f5f0e8; }
+
+.station-item-code {
+  font-family: 'Teko', sans-serif;
+  font-size: 16px;
+  color: #1a1a1a;
+  min-width: 44px;
+}
+
+.station-item-name {
+  font-size: 12px;
+  color: #aaaaaa;
+}
+
+/* ---- Volume sliders ---- */
+.volumes {
+  border-top: 1px solid #eeeeee;
+  padding-top: 16px;
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.volume-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.volume-label {
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: #aaaaaa;
+  text-transform: uppercase;
+  min-width: 28px;
+}
+
+.slider {
+  flex: 1;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 2px;
+  background: #eeeeee;
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+}
+
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  background: #1a1a1a;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.slider::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  background: #1a1a1a;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+}
+
+/* Dynamic slider fill via CSS custom property set by JS */
+.slider {
+  background: linear-gradient(
+    to right,
+    #1a1a1a 0%,
+    #1a1a1a calc(var(--val, 70) * 1%),
+    #eeeeee calc(var(--val, 70) * 1%),
+    #eeeeee 100%
+  );
+}
+
+/* ---- Footer ---- */
+.card-footer {
+  display: flex;
+  justify-content: center;
+  border-top: 1px solid #eeeeee;
+  padding-top: 14px;
+}
+
+.card-footer a {
+  color: #cccccc;
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.card-footer a:hover { color: #1a1a1a; }
