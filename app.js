@@ -310,3 +310,11 @@ function makeStreamWatcher(audioEl, getName, isPlayingFn, onRetry, onExhausted) 
   applyState();
   updateMediaSession();
 })();
+
+// --- Service Worker registration ---
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/lofiatcradio/sw.js')
+      .catch(err => console.warn('SW registration failed:', err));
+  });
+}
