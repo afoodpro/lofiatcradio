@@ -294,6 +294,22 @@ function makeStreamWatcher(audioEl, getName, isPlayingFn, onRetry, onExhausted) 
     saveState(state);
   });
 
+  function applySliderWheel(slider, audioEl, stateKey) {
+    slider.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const delta = e.deltaY < 0 ? 0.05 : -0.05;
+      const next = Math.min(1, Math.max(0, state[stateKey] + delta));
+      state[stateKey] = Math.round(next * 100) / 100;
+      audioEl.volume = state[stateKey];
+      slider.value = state[stateKey];
+      slider.style.setProperty('--val', state[stateKey] * 100);
+      saveState(state);
+    }, { passive: false });
+  }
+
+  applySliderWheel(lofiSlider, audioLofi, 'lofiVolume');
+  applySliderWheel(atcSlider,  audioAtc,  'atcVolume');
+
   document.addEventListener('keydown', (e) => {
     // Don't intercept when user interacts with a form element
     if (e.target.tagName === 'INPUT') return;
