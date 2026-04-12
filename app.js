@@ -371,7 +371,9 @@ function makeStreamWatcher(audioEl, getName, isPlayingFn, onRetry, onExhausted) 
     });
 
     audioAtc.src = getAtcUrl(code);
-    if (state.isPlaying) audioAtc.play();
+    if (state.isPlaying) audioAtc.play().catch(err => {
+      if (err.name !== 'AbortError') console.error('ATC play error:', err);
+    });
 
     updateMediaSession();
     updateMetar(code);
