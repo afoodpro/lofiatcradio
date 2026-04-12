@@ -389,6 +389,48 @@ body {
   );
 }
 
+/* ---- Sleep timer ---- */
+.sleep-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-top: 10px;
+  margin-bottom: 16px;
+}
+
+.sleep-label {
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: #aaaaaa;
+  text-transform: uppercase;
+  min-width: 28px;
+}
+
+.sleep-options {
+  display: flex;
+  gap: 12px;
+}
+
+.sleep-option {
+  font-size: 9px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: #cccccc;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.15s ease;
+}
+
+.sleep-option:hover {
+  color: #777777;
+}
+
+.sleep-option.active {
+  color: #1a1a1a;
+}
+
 /* ---- Reduced motion ---- */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

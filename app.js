@@ -185,6 +185,15 @@ function makeStreamWatcher(audioEl, getName, isPlayingFn, onRetry, onExhausted) 
     });
   }
 
+  // Sleep timer state
+  let sleepTimer = null;
+  const sleepOptions = document.querySelectorAll('.sleep-option');
+
+  function cancelSleep() {
+    if (sleepTimer) { clearTimeout(sleepTimer); sleepTimer = null; }
+    sleepOptions.forEach(b => b.classList.remove('active'));
+  }
+
   // Stream resilience watchers
   const lofiWatcher = makeStreamWatcher(
     audioLofi,
@@ -242,6 +251,7 @@ function makeStreamWatcher(audioEl, getName, isPlayingFn, onRetry, onExhausted) 
       atcWatcher.cancel();
       setLofiError(false);
       setAtcError(state.selectedStation, false);
+      cancelSleep();
     }
   }
 
@@ -325,6 +335,23 @@ function makeStreamWatcher(audioEl, getName, isPlayingFn, onRetry, onExhausted) 
     if (idx >= 0 && idx < stationKeys.length) {
       switchStation(stationKeys[idx]);
     }
+  });
+
+  sleepOptions.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const minutes = parseInt(btn.dataset.minutes, 10);
+      if (btn.classList.contains('active')) {
+        cancelSleep();
+        return;
+      }
+      cancelSleep();
+      btn.classList.add('active');
+      sleepTimer = setTimeout(() => {
+        setPlaying(false);
+        sleepOptions.forEach(b => b.classList.remove('active'));
+        sleepTimer = null;
+      }, minutes * 60 * 1000);
+    });
   });
 
   applyState();
