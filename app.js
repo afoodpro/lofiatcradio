@@ -48,6 +48,48 @@ function saveState(state) {
   }));
 }
 
+// --- Stream resilience ---
+function makeStreamWatcher(audioEl, getName, isPlayingFn, onRetry) {
+  const RETRY_DELAY_MS = 5000;
+  const MAX_RETRIES = 5;
+  let retryCount = 0;
+  let retryTimer = null;
+
+  function scheduleRetry() {
+    if (!isPlayingFn()) return;
+    if (retryCount >= MAX_RETRIES) {
+      console.warn(getName() + ': max retries reached, giving up');
+      return;
+    }
+    retryCount++;
+    console.log(getName() + ': retry ' + retryCount + '/' + MAX_RETRIES + ' in ' + RETRY_DELAY_MS + 'ms');
+    retryTimer = setTimeout(() => {
+      if (!isPlayingFn()) return;
+      onRetry();
+    }, RETRY_DELAY_MS);
+  }
+
+  audioEl.addEventListener('error', () => {
+    if (isPlayingFn()) scheduleRetry();
+  });
+
+  audioEl.addEventListener('stalled', () => {
+    if (isPlayingFn()) scheduleRetry();
+  });
+
+  audioEl.addEventListener('playing', () => {
+    retryCount = 0;
+    if (retryTimer) { clearTimeout(retryTimer); retryTimer = null; }
+  });
+
+  return {
+    cancel() {
+      retryCount = 0;
+      if (retryTimer) { clearTimeout(retryTimer); retryTimer = null; }
+    },
+  };
+}
+
 // --- DOM wiring ---
 (function () {
   const state = loadState();
@@ -62,6 +104,27 @@ function saveState(state) {
   const stationItems = document.querySelectorAll('.station-item');
   const lofiSlider = document.getElementById('lofi-vol');
   const atcSlider  = document.getElementById('atc-vol');
+
+  // Stream resilience watchers
+  const lofiWatcher = makeStreamWatcher(
+    audioLofi,
+    () => 'audioLofi',
+    () => state.isPlaying,
+    () => {
+      audioLofi.src = LOFI_URL;
+      audioLofi.play().catch(() => {});
+    }
+  );
+
+  const atcWatcher = makeStreamWatcher(
+    audioAtc,
+    () => 'audioAtc[' + state.selectedStation + ']',
+    () => state.isPlaying,
+    () => {
+      audioAtc.src = getAtcUrl(state.selectedStation);
+      audioAtc.play().catch(() => {});
+    }
+  );
 
   // Apply initial state to DOM
   function applyState() {
@@ -137,6 +200,8 @@ function saveState(state) {
       iconPlay.classList.remove('icon-hidden');
       iconPause.classList.add('icon-hidden');
       setBuffering(false);
+      lofiWatcher.cancel();
+      atcWatcher.cancel();
     }
   }
 

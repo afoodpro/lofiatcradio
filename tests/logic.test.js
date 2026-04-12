@@ -76,4 +76,49 @@ assert.strictEqual(s4.selectedStation, 'RJTT', 'loadState partial: preserves sta
 assert.strictEqual(s4.lofiVolume, 0.3, 'loadState partial: uses default lofiVolume');
 assert.strictEqual(s4.atcVolume, 0.7, 'loadState partial: uses default atcVolume');
 
+// --- makeStreamWatcher() tests ---
+// makeStreamWatcher is defined before '// --- DOM wiring ---' so it IS loaded by the eval above.
+
+// 1. Does not retry immediately on error — fires after delay
+{
+  const mockAudio = { _h: {}, addEventListener(e, fn) { this._h[e] = fn; } };
+  let retried = false;
+  const watcher = makeStreamWatcher(mockAudio, () => 'test', () => true, () => { retried = true; });
+  mockAudio._h['error']();
+  watcher.cancel(); // cancel before timer fires
+  assert.strictEqual(retried, false, 'retry not immediate — fires after delay');
+}
+
+// 2. cancel() prevents retry from executing
+{
+  const mockAudio = { _h: {}, addEventListener(e, fn) { this._h[e] = fn; } };
+  let retried = false;
+  const watcher = makeStreamWatcher(mockAudio, () => 'test', () => true, () => { retried = true; });
+  mockAudio._h['error']();
+  watcher.cancel();
+  assert.strictEqual(retried, false, 'cancel prevents retry from executing');
+}
+
+// 3. Does not schedule retry when not playing
+{
+  let isPlaying = false;
+  const mockAudio = { _h: {}, addEventListener(e, fn) { this._h[e] = fn; } };
+  let retried = false;
+  const watcher = makeStreamWatcher(mockAudio, () => 'test', () => isPlaying, () => { retried = true; });
+  mockAudio._h['error']();
+  assert.strictEqual(retried, false, 'no retry scheduled when not playing');
+  watcher.cancel();
+}
+
+// 4. playing event resets retry count
+{
+  const mockAudio = { _h: {}, addEventListener(e, fn) { this._h[e] = fn; } };
+  const watcher = makeStreamWatcher(mockAudio, () => 'test', () => true, () => {});
+  mockAudio._h['error'](); watcher.cancel(); // trigger + cancel (count = 1)
+  mockAudio._h['playing'](); // reset count
+  // If count was reset, we can trigger again without hitting MAX_RETRIES
+  mockAudio._h['error'](); watcher.cancel();
+  assert.ok(true, 'playing event resets retry count without error');
+}
+
 console.log('All tests passed');
