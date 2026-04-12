@@ -2,7 +2,11 @@
 const STATIONS = {
   KJFK: { name: 'New York JFK',    url: 'https://s1-fmt2.liveatc.net/kjfk9_s' },
   KSFO: { name: 'San Francisco',   url: 'https://s1-fmt2.liveatc.net/ksfo_twr' },
+  EGLL: { name: 'London Heathrow', url: 'https://s1-fmt2.liveatc.net/egll8_s' },
+  KLAX: { name: 'Los Angeles',     url: 'https://s1-fmt2.liveatc.net/klax5_s' },
+  OMDB: { name: 'Dubai',           url: 'https://s1-bos.liveatc.net/omdb' },
   RJTT: { name: 'Tokyo Haneda',    url: 'https://s1-fmt2.liveatc.net/rjtt_control' },
+  ZSPD: { name: 'Shanghai Pudong', url: 'https://s1-bos.liveatc.net/zspd' },
   UNNT: { name: 'Novosibirsk',     url: 'https://s1-fmt2.liveatc.net/unnt' },
   URSS: { name: 'Khabarovsk',      url: 'https://s1-bos.liveatc.net/urss' },
 };

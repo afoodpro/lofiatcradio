@@ -245,6 +245,19 @@ body {
 .station-list {
   list-style: none;
   margin-bottom: 20px;
+  max-height: 196px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #e0dbd0 transparent;
+}
+
+.station-list::-webkit-scrollbar {
+  width: 3px;
+}
+
+.station-list::-webkit-scrollbar-thumb {
+  background: #e0dbd0;
+  border-radius: 2px;
 }
 
 .station-item {
