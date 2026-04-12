@@ -237,7 +237,7 @@ function makeStreamWatcher(audioEl, getName, isPlayingFn, onRetry, onExhausted) 
   }
 
   audioLofi.addEventListener('waiting', () => setBuffering(true));
-  audioLofi.addEventListener('playing', () => setBuffering(false));
+  audioLofi.addEventListener('playing', () => { setBuffering(false); if (state.isPlaying) startListenTimer(); });
   audioLofi.addEventListener('canplay', () => setBuffering(false));
 
   // Stream error display
@@ -314,7 +314,6 @@ function makeStreamWatcher(audioEl, getName, isPlayingFn, onRetry, onExhausted) 
       audioAtc.play().catch(err => {
         console.error('ATC stream error:', err);
       });
-      startListenTimer();
     } else {
       audioLofi.pause();
       audioAtc.pause();
