@@ -162,7 +162,7 @@ function makeStreamWatcher(audioEl, getName, isPlayingFn, onRetry, onExhausted) 
       if (!m) return;
       const text = formatMetar(m);
       if (text) metarInfo.textContent = text;
-    });
+    }).catch(() => {});
   }
 
   const stationItems = document.querySelectorAll('.station-item');
