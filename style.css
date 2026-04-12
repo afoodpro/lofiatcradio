@@ -131,6 +131,24 @@ body {
   50%       { opacity: 0.2; }
 }
 
+.live-badge.is-error .live-dot {
+  background: #cccccc;
+  animation: none;
+}
+
+.live-badge.is-error .live-badge-text {
+  color: #cccccc;
+}
+
+.station-item.is-offline {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+.station-item.is-offline .station-item-name::after {
+  content: ' · offline';
+}
+
 .station-code {
   font-family: 'Teko', sans-serif;
   font-size: 36px;

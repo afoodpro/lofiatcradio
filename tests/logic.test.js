@@ -121,6 +121,26 @@ assert.strictEqual(s4.atcVolume, 0.7, 'loadState partial: uses default atcVolume
   assert.ok(true, 'playing event resets retry count without error');
 }
 
+// 5. onExhausted fires when MAX_RETRIES (5) reached
+{
+  // Use synchronous setTimeout so retries execute immediately and retryCount accumulates
+  const origSetTimeout = global.setTimeout;
+  global.setTimeout = (fn) => { fn(); return 0; };
+
+  const mockAudio = { _h: {}, addEventListener(e, fn) { this._h[e] = fn; } };
+  let exhausted = false;
+  // onRetry triggers another error so retryCount keeps climbing each cycle
+  const watcher = makeStreamWatcher(
+    mockAudio, () => 'test', () => true,
+    () => { mockAudio._h['error'](); },
+    () => { exhausted = true; }
+  );
+  mockAudio._h['error'](); // kicks off the retry chain
+  assert.strictEqual(exhausted, true, 'onExhausted fires when max retries reached');
+
+  global.setTimeout = origSetTimeout;
+}
+
 // --- getStationFromUrl() tests ---
 const origWindow = global.window;
 

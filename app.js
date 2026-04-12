@@ -59,7 +59,7 @@ function getStationFromUrl() {
 }
 
 // --- Stream resilience ---
-function makeStreamWatcher(audioEl, getName, isPlayingFn, onRetry) {
+function makeStreamWatcher(audioEl, getName, isPlayingFn, onRetry, onExhausted) {
   const RETRY_DELAY_MS = 5000;
   const MAX_RETRIES = 5;
   let retryCount = 0;
@@ -70,6 +70,7 @@ function makeStreamWatcher(audioEl, getName, isPlayingFn, onRetry) {
     if (!isPlayingFn()) return;
     if (retryCount >= MAX_RETRIES) {
       console.warn(getName() + ': max retries reached, giving up');
+      if (onExhausted) onExhausted();
       return;
     }
     retryCount++;
@@ -117,27 +118,6 @@ function makeStreamWatcher(audioEl, getName, isPlayingFn, onRetry) {
   const lofiSlider = document.getElementById('lofi-vol');
   const atcSlider  = document.getElementById('atc-vol');
 
-  // Stream resilience watchers
-  const lofiWatcher = makeStreamWatcher(
-    audioLofi,
-    () => 'audioLofi',
-    () => state.isPlaying,
-    () => {
-      audioLofi.src = LOFI_URL;
-      audioLofi.play().catch(() => {});
-    }
-  );
-
-  const atcWatcher = makeStreamWatcher(
-    audioAtc,
-    () => 'audioAtc[' + state.selectedStation + ']',
-    () => state.isPlaying,
-    () => {
-      audioAtc.src = getAtcUrl(state.selectedStation);
-      audioAtc.play().catch(() => {});
-    }
-  );
-
   // Apply initial state to DOM
   function applyState() {
     // volumes
@@ -184,6 +164,48 @@ function makeStreamWatcher(audioEl, getName, isPlayingFn, onRetry) {
   audioLofi.addEventListener('playing', () => setBuffering(false));
   audioLofi.addEventListener('canplay', () => setBuffering(false));
 
+  // Stream error display
+  const liveBadge = document.querySelector('.live-badge');
+  const liveBadgeText = document.querySelector('.live-badge-text');
+
+  function setLofiError(hasError) {
+    liveBadge.classList.toggle('is-error', hasError);
+    liveBadgeText.textContent = hasError ? 'LO-FI UNAVAILABLE' : 'LIVE · ATC RADIO';
+  }
+
+  function setAtcError(code, hasError) {
+    stationItems.forEach(item => {
+      if (item.dataset.code === code) {
+        item.classList.toggle('is-offline', hasError);
+      }
+    });
+  }
+
+  // Stream resilience watchers
+  const lofiWatcher = makeStreamWatcher(
+    audioLofi,
+    () => 'audioLofi',
+    () => state.isPlaying,
+    () => {
+      setLofiError(false);
+      audioLofi.src = LOFI_URL;
+      audioLofi.play().catch(() => {});
+    },
+    () => setLofiError(true)
+  );
+
+  const atcWatcher = makeStreamWatcher(
+    audioAtc,
+    () => 'audioAtc[' + state.selectedStation + ']',
+    () => state.isPlaying,
+    () => {
+      setAtcError(state.selectedStation, false);
+      audioAtc.src = getAtcUrl(state.selectedStation);
+      audioAtc.play().catch(() => {});
+    },
+    () => setAtcError(state.selectedStation, true)
+  );
+
   // Toggle play/pause
   function setPlaying(playing) {
     state.isPlaying = playing;
@@ -214,12 +236,16 @@ function makeStreamWatcher(audioEl, getName, isPlayingFn, onRetry) {
       setBuffering(false);
       lofiWatcher.cancel();
       atcWatcher.cancel();
+      setLofiError(false);
+      setAtcError(state.selectedStation, false);
     }
   }
 
   // Switch ATC station — fade header out, swap text, fade in
   function switchStation(code) {
     if (!STATIONS[code]) return;
+    atcWatcher.cancel();
+    setAtcError(state.selectedStation, false);
     state.selectedStation = code;
 
     stationCode.classList.add('fading');
