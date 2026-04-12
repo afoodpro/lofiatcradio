@@ -7,7 +7,7 @@ const STATIONS = {
   URSS: { name: 'Khabarovsk',      url: 'https://s1-bos.liveatc.net/urss' },
 };
 
-const LOFI_URL = 'https://stream.zeno.fm/0r0xa792kwzuv';
+const LOFI_URL = 'https://lofi.stream.laut.fm/lofi';
 
 function getAtcUrl(code) {
   return STATIONS[code] ? STATIONS[code].url : null;
@@ -17,8 +17,8 @@ function defaultState() {
   return {
     isPlaying: false,
     selectedStation: 'KJFK',
-    lofiVolume: 0.7,
-    atcVolume: 0.4,
+    lofiVolume: 0.3,
+    atcVolume: 0.7,
   };
 }
 
@@ -87,29 +87,64 @@ function saveState(state) {
     audioAtc.src  = getAtcUrl(state.selectedStation);
   }
 
+  // Media Session API — lock screen / car display / Bluetooth controls
+  function updateMediaSession() {
+    if (!('mediaSession' in navigator)) return;
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: STATIONS[state.selectedStation].name + ' ATC',
+      artist: 'Lo-Fi × ATC Radio',
+      album: state.selectedStation,
+    });
+    navigator.mediaSession.setActionHandler('play',  () => setPlaying(true));
+    navigator.mediaSession.setActionHandler('pause', () => setPlaying(false));
+    navigator.mediaSession.setActionHandler('stop',  () => setPlaying(false));
+  }
+
   // Toggle play/pause
   function setPlaying(playing) {
     state.isPlaying = playing;
+    playBtn.classList.toggle('is-playing', playing);
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.playbackState = playing ? 'playing' : 'paused';
+    }
     if (playing) {
-      audioLofi.play();
-      audioAtc.play();
-      iconPlay.style.display  = 'none';
+      iconPlay.classList.add('icon-hidden');
+      iconPause.classList.remove('icon-hidden');
       iconPause.style.display = '';
+      audioLofi.play().catch(err => {
+        console.error('Lo-fi stream error:', err);
+        state.isPlaying = false;
+        playBtn.classList.remove('is-playing');
+        iconPlay.classList.remove('icon-hidden');
+        iconPause.classList.add('icon-hidden');
+        if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
+      });
+      audioAtc.play().catch(err => {
+        console.error('ATC stream error:', err);
+      });
     } else {
       audioLofi.pause();
       audioAtc.pause();
-      iconPlay.style.display  = '';
-      iconPause.style.display = 'none';
+      iconPlay.classList.remove('icon-hidden');
+      iconPause.classList.add('icon-hidden');
     }
   }
 
-  // Switch ATC station
+  // Switch ATC station — fade header out, swap text, fade in
   function switchStation(code) {
     if (!STATIONS[code]) return;
     state.selectedStation = code;
 
-    stationCode.textContent = code;
-    stationName.textContent = STATIONS[code].name;
+    stationCode.classList.add('fading');
+    stationName.classList.add('fading');
+
+    setTimeout(() => {
+      stationCode.textContent = code;
+      stationName.textContent = STATIONS[code].name;
+      stationCode.classList.remove('fading');
+      stationName.classList.remove('fading');
+    }, 200);
+
     stationItems.forEach(item => {
       item.classList.toggle('active', item.dataset.code === code);
     });
@@ -117,6 +152,7 @@ function saveState(state) {
     audioAtc.src = getAtcUrl(code);
     if (state.isPlaying) audioAtc.play();
 
+    updateMediaSession();
     saveState(state);
   }
 
@@ -142,4 +178,5 @@ function saveState(state) {
   });
 
   applyState();
+  updateMediaSession();
 })();

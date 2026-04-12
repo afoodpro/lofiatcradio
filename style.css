@@ -23,9 +23,9 @@ body {
 .blob {
   position: absolute;
   border-radius: 50%;
-  filter: blur(60px);
-  opacity: 0.18;
-  background: #b8b0a0;
+  filter: blur(80px);
+  opacity: 0.45;
+  background: #c4b8a8;
 }
 
 .blob-1 {
@@ -69,6 +69,12 @@ body {
   50%       { transform: translate(-50px, 30px) scale(1.1); }
 }
 
+/* ---- Easing tokens ---- */
+:root {
+  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+  --ease-out-expo:  cubic-bezier(0.16, 1, 0.3, 1);
+}
+
 /* ---- Card ---- */
 .card {
   position: relative;
@@ -78,6 +84,19 @@ body {
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
   padding: 28px;
   width: 340px;
+  /* Page load entrance */
+  animation: card-enter 0.7s var(--ease-out-expo) both;
+}
+
+@keyframes card-enter {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* ---- Card header ---- */
@@ -118,6 +137,7 @@ body {
   color: #1a1a1a;
   line-height: 1;
   letter-spacing: 1px;
+  transition: opacity 0.2s ease;
 }
 
 .station-name {
@@ -125,6 +145,12 @@ body {
   color: #aaaaaa;
   margin-top: 2px;
   margin-bottom: 20px;
+  transition: opacity 0.2s ease;
+}
+
+.station-code.fading,
+.station-name.fading {
+  opacity: 0;
 }
 
 /* ---- Play button ---- */
@@ -140,11 +166,46 @@ body {
   cursor: pointer;
   margin: 0 auto 24px;
   color: #ffffff;
-  transition: transform 0.1s ease, background 0.15s ease;
+  position: relative;
+  transition: transform 0.25s var(--ease-out-quart),
+              background 0.25s ease,
+              box-shadow 0.25s ease;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.12);
 }
 
-.play-btn:hover  { background: #333333; }
-.play-btn:active { transform: scale(0.95); }
+.play-btn:hover {
+  background: #2e2e2e;
+  transform: scale(1.05);
+  box-shadow: 0 4px 14px rgba(0,0,0,0.18);
+}
+
+.play-btn:active {
+  transform: scale(0.96);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.12);
+  transition-duration: 0.1s;
+}
+
+/* Breathing pulse when playing */
+.play-btn.is-playing {
+  animation: breathe 4s ease-in-out infinite;
+}
+
+@keyframes breathe {
+  0%, 100% { box-shadow: 0 2px 8px rgba(0,0,0,0.12); }
+  50%       { box-shadow: 0 4px 20px rgba(0,0,0,0.22); }
+}
+
+/* Icon crossfade inside play button */
+.play-btn svg {
+  position: absolute;
+  transition: opacity 0.25s ease, transform 0.25s var(--ease-out-quart);
+}
+
+.play-btn svg.icon-hidden {
+  opacity: 0;
+  transform: scale(0.75);
+  pointer-events: none;
+}
 
 /* ---- Station list ---- */
 .station-list {
@@ -159,22 +220,45 @@ body {
   padding: 8px 10px;
   border-radius: 8px;
   cursor: pointer;
-  transition: background 0.15s ease;
+  transition: background 0.25s ease, transform 0.25s var(--ease-out-quart), opacity 0.25s ease;
+  position: relative;
 }
 
-.station-item:hover  { background: #f5f0e8; }
-.station-item.active { background: #f5f0e8; }
+.station-item:hover {
+  background: #f5f0e8;
+  transform: translateX(2px);
+}
+
+.station-item:active {
+  opacity: 0.7;
+  transition-duration: 0.1s;
+}
+
+.station-item.active {
+  background: #f5f0e8;
+  transform: translateX(2px);
+}
 
 .station-item-code {
   font-family: 'Teko', sans-serif;
   font-size: 16px;
   color: #1a1a1a;
   min-width: 44px;
+  transition: color 0.15s ease;
+}
+
+.station-item.active .station-item-code {
+  color: #1a1a1a;
 }
 
 .station-item-name {
   font-size: 12px;
   color: #aaaaaa;
+  transition: color 0.15s ease;
+}
+
+.station-item.active .station-item-name {
+  color: #777777;
 }
 
 /* ---- Volume sliders ---- */
@@ -220,6 +304,17 @@ body {
   background: #1a1a1a;
   border-radius: 50%;
   cursor: pointer;
+  transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1),
+              box-shadow 0.15s ease;
+}
+
+.slider:hover::-webkit-slider-thumb {
+  transform: scale(1.4);
+  box-shadow: 0 0 0 4px rgba(26,26,26,0.1);
+}
+
+.slider:active::-webkit-slider-thumb {
+  transform: scale(1.2);
 }
 
 .slider::-moz-range-thumb {
@@ -229,6 +324,11 @@ body {
   border-radius: 50%;
   border: none;
   cursor: pointer;
+  transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.slider:hover::-moz-range-thumb {
+  transform: scale(1.4);
 }
 
 /* Dynamic slider fill via CSS custom property set by JS */
@@ -240,6 +340,15 @@ body {
     #eeeeee calc(var(--val, 70) * 1%),
     #eeeeee 100%
   );
+}
+
+/* ---- Reduced motion ---- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 /* ---- Footer ---- */
