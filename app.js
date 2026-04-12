@@ -165,7 +165,6 @@ function makeStreamWatcher(audioEl, getName, isPlayingFn, onRetry, onExhausted) 
   const stationName = document.getElementById('station-name');
   const metarInfo = document.getElementById('metar-info');
   const listenTimerEl = document.getElementById('listen-timer');
-  const signalBars = document.getElementById('signal-bars');
   let listenSeconds = 0;
   let listenInterval = null;
 
@@ -295,7 +294,6 @@ function makeStreamWatcher(audioEl, getName, isPlayingFn, onRetry, onExhausted) 
   // Toggle play/pause
   function setPlaying(playing) {
     state.isPlaying = playing;
-    signalBars.classList.toggle('is-playing', playing);
     playBtn.classList.toggle('is-playing', playing);
     if ('mediaSession' in navigator) {
       navigator.mediaSession.playbackState = playing ? 'playing' : 'paused';
