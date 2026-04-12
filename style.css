@@ -140,6 +140,44 @@ body {
   color: #cccccc;
 }
 
+.signal-bars {
+  display: inline-flex;
+  gap: 2px;
+  align-items: flex-end;
+  height: 12px;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+.signal-bars span {
+  display: block;
+  width: 3px;
+  height: 3px;
+  background: currentColor;
+  border-radius: 1px;
+  opacity: 0.35;
+}
+.signal-bars.is-playing span {
+  opacity: 1;
+  animation: bar-bounce var(--bar-dur, 0.8s) ease-in-out infinite alternate;
+}
+.signal-bars.is-playing span:nth-child(1) { --bar-dur: 0.7s;  animation-delay: 0s; }
+.signal-bars.is-playing span:nth-child(2) { --bar-dur: 0.9s;  animation-delay: 0.15s; }
+.signal-bars.is-playing span:nth-child(3) { --bar-dur: 0.75s; animation-delay: 0.05s; }
+.signal-bars.is-playing span:nth-child(4) { --bar-dur: 1.0s;  animation-delay: 0.2s; }
+
+@keyframes bar-bounce {
+  from { height: 3px; }
+  to   { height: 11px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .signal-bars.is-playing span {
+    animation: none;
+    height: 8px;
+    opacity: 1;
+  }
+}
+
 .station-item.is-offline {
   opacity: 0.4;
   pointer-events: none;
