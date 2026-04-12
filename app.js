@@ -264,6 +264,23 @@ function makeStreamWatcher(audioEl, getName, isPlayingFn, onRetry) {
     saveState(state);
   });
 
+  document.addEventListener('keydown', (e) => {
+    // Don't intercept when user interacts with a form element
+    if (e.target.tagName === 'INPUT') return;
+
+    if (e.code === 'Space') {
+      e.preventDefault(); // prevent page scroll
+      setPlaying(!state.isPlaying);
+      return;
+    }
+
+    const stationKeys = Object.keys(STATIONS);
+    const idx = parseInt(e.key, 10) - 1;
+    if (idx >= 0 && idx < stationKeys.length) {
+      switchStation(stationKeys[idx]);
+    }
+  });
+
   applyState();
   updateMediaSession();
 })();
