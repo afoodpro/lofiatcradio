@@ -33,14 +33,14 @@ assert.strictEqual(
 const def = defaultState();
 assert.strictEqual(def.isPlaying, false, 'default isPlaying false');
 assert.strictEqual(def.selectedStation, 'KJFK', 'default station KJFK');
-assert.strictEqual(def.lofiVolume, 0.7, 'default lofiVolume 0.7');
-assert.strictEqual(def.atcVolume, 0.4, 'default atcVolume 0.4');
+assert.strictEqual(def.lofiVolume, 0.3, 'default lofiVolume 0.3');
+assert.strictEqual(def.atcVolume, 0.7, 'default atcVolume 0.7');
 
 const merged = mergeStoredState({ selectedStation: 'RJTT', lofiVolume: 0.5 }, defaultState());
 assert.strictEqual(merged.selectedStation, 'RJTT', 'mergeStoredState preserves stored station');
 assert.strictEqual(merged.lofiVolume, 0.5, 'mergeStoredState preserves stored lofiVolume');
 assert.strictEqual(merged.isPlaying, false, 'mergeStoredState always resets isPlaying to false');
-assert.strictEqual(merged.atcVolume, 0.4, 'mergeStoredState uses default for missing key');
+assert.strictEqual(merged.atcVolume, 0.7, 'mergeStoredState uses default for missing key');
 
 // --- loadState() tests ---
 
@@ -49,8 +49,8 @@ global.localStorage._store = {};
 const s1 = loadState();
 assert.strictEqual(s1.isPlaying, false, 'loadState empty: isPlaying false');
 assert.strictEqual(s1.selectedStation, 'KJFK', 'loadState empty: selectedStation KJFK');
-assert.strictEqual(s1.lofiVolume, 0.7, 'loadState empty: lofiVolume 0.7');
-assert.strictEqual(s1.atcVolume, 0.4, 'loadState empty: atcVolume 0.4');
+assert.strictEqual(s1.lofiVolume, 0.3, 'loadState empty: lofiVolume 0.3');
+assert.strictEqual(s1.atcVolume, 0.7, 'loadState empty: atcVolume 0.7');
 
 // 2. Corrupted JSON → returns defaults
 global.localStorage._store = { lofiatc_state: 'not-valid-json{{' };
@@ -73,7 +73,7 @@ global.localStorage._store = {
 };
 const s4 = loadState();
 assert.strictEqual(s4.selectedStation, 'RJTT', 'loadState partial: preserves station');
-assert.strictEqual(s4.lofiVolume, 0.7, 'loadState partial: uses default lofiVolume');
-assert.strictEqual(s4.atcVolume, 0.4, 'loadState partial: uses default atcVolume');
+assert.strictEqual(s4.lofiVolume, 0.3, 'loadState partial: uses default lofiVolume');
+assert.strictEqual(s4.atcVolume, 0.7, 'loadState partial: uses default atcVolume');
 
 console.log('All tests passed');
