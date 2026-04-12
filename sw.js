@@ -1,4 +1,4 @@
-const CACHE = 'lofiatc-v2';
+const CACHE = 'lofiatc-v3';
 
 const SHELL = [
   '/lofiatcradio/',
@@ -8,6 +8,7 @@ const SHELL = [
   '/lofiatcradio/assets/font/Teko-Regular.ttf',
   '/lofiatcradio/manifest.json',
   '/lofiatcradio/icon.svg',
+  '/lofiatcradio/og-image.svg',
 ];
 
 // Audio stream hostnames — never cache these

@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <!-- Background -->
+  <rect width="1200" height="630" fill="#1a1a1a"/>
+
+  <!-- Subtle warm blobs -->
+  <circle cx="180" cy="520" r="340" fill="#f5f0e8" fill-opacity="0.035"/>
+  <circle cx="1060" cy="130" r="280" fill="#f5f0e8" fill-opacity="0.025"/>
+
+  <!-- Live dot -->
+  <circle cx="472" cy="256" r="8" fill="#e85d3a"/>
+
+  <!-- Live badge text -->
+  <text x="492" y="268"
+        font-family="'Arial Narrow', 'Arial', sans-serif"
+        font-size="22" font-weight="bold" letter-spacing="5"
+        fill="#f5f0e8" opacity="0.55">LIVE · ATC RADIO</text>
+
+  <!-- Main title -->
+  <text x="600" y="380"
+        font-family="'Arial Narrow', 'Arial', sans-serif"
+        font-size="130" font-weight="bold" letter-spacing="10"
+        fill="#f5f0e8" text-anchor="middle">ATC</text>
+
+  <!-- Subtitle -->
+  <text x="600" y="440"
+        font-family="'Arial Narrow', 'Arial', sans-serif"
+        font-size="20" letter-spacing="6"
+        fill="#f5f0e8" text-anchor="middle" opacity="0.4">
+    LO-FI MUSIC × LIVE AIR TRAFFIC CONTROL
+  </text>
+
+  <!-- Station list -->
+  <text x="600" y="528"
+        font-family="'Courier New', monospace"
+        font-size="14" letter-spacing="3"
+        fill="#f5f0e8" text-anchor="middle" opacity="0.25">
+    KJFK · KSFO · EGLL · KLAX · OMDB · RJTT · ZSPD
+  </text>
+
+  <!-- URL -->
+  <text x="600" y="596"
+        font-family="'Courier New', monospace"
+        font-size="13" letter-spacing="1"
+        fill="#f5f0e8" text-anchor="middle" opacity="0.2">
+    afoodpro.github.io/lofiatcradio
+  </text>
+</svg>
