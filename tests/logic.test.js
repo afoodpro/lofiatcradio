@@ -35,6 +35,7 @@ assert.strictEqual(def.isPlaying, false, 'default isPlaying false');
 assert.strictEqual(def.selectedStation, 'KJFK', 'default station KJFK');
 assert.strictEqual(def.lofiVolume, 0.3, 'default lofiVolume 0.3');
 assert.strictEqual(def.atcVolume, 0.7, 'default atcVolume 0.7');
+assert.strictEqual(def.selectedLofiStream, 'lofi', 'default selectedLofiStream lofi');
 
 const merged = mergeStoredState({ selectedStation: 'RJTT', lofiVolume: 0.5 }, defaultState());
 assert.strictEqual(merged.selectedStation, 'RJTT', 'mergeStoredState preserves stored station');
@@ -161,5 +162,27 @@ global.window = { location: { search: '?station=kjfk' } };
 assert.strictEqual(getStationFromUrl(), null, 'getStationFromUrl: lowercase code returns null');
 
 global.window = origWindow;
+
+// --- getLofiUrl() tests ---
+assert.strictEqual(
+  getLofiUrl('lofi'),
+  'https://lofi.stream.laut.fm/lofi',
+  'getLofiUrl: lofi stream'
+);
+assert.strictEqual(
+  getLofiUrl('jazz'),
+  'https://jazz.stream.laut.fm/jazz',
+  'getLofiUrl: jazz stream'
+);
+assert.strictEqual(
+  getLofiUrl('ambient'),
+  'https://ambient.stream.laut.fm/ambient',
+  'getLofiUrl: ambient stream'
+);
+assert.strictEqual(
+  getLofiUrl('unknown'),
+  'https://lofi.stream.laut.fm/lofi',
+  'getLofiUrl: unknown key falls back to lofi'
+);
 
 console.log('All tests passed');

@@ -11,7 +11,15 @@ const STATIONS = {
   URSS: { name: 'Khabarovsk',      url: 'https://s1-bos.liveatc.net/urss' },
 };
 
-const LOFI_URL = 'https://lofi.stream.laut.fm/lofi';
+const LOFI_STREAMS = {
+  lofi:    { name: 'Lo-Fi',   url: 'https://lofi.stream.laut.fm/lofi' },
+  jazz:    { name: 'Jazz',    url: 'https://jazz.stream.laut.fm/jazz' },
+  ambient: { name: 'Ambient', url: 'https://ambient.stream.laut.fm/ambient' },
+};
+
+function getLofiUrl(key) {
+  return LOFI_STREAMS[key] ? LOFI_STREAMS[key].url : LOFI_STREAMS.lofi.url;
+}
 
 function getAtcUrl(code) {
   return STATIONS[code] ? STATIONS[code].url : null;
@@ -23,6 +31,7 @@ function defaultState() {
     selectedStation: 'KJFK',
     lofiVolume: 0.3,
     atcVolume: 0.7,
+    selectedLofiStream: 'lofi',
   };
 }
 
@@ -49,6 +58,7 @@ function saveState(state) {
     selectedStation: state.selectedStation,
     lofiVolume: state.lofiVolume,
     atcVolume: state.atcVolume,
+    selectedLofiStream: state.selectedLofiStream,
   }));
 }
 
@@ -142,7 +152,7 @@ function makeStreamWatcher(audioEl, getName, isPlayingFn, onRetry, onExhausted) 
     });
 
     // audio sources
-    audioLofi.src = LOFI_URL;
+    audioLofi.src = getLofiUrl(state.selectedLofiStream);
     audioAtc.src  = getAtcUrl(state.selectedStation);
   }
 
@@ -201,7 +211,7 @@ function makeStreamWatcher(audioEl, getName, isPlayingFn, onRetry, onExhausted) 
     () => state.isPlaying,
     () => {
       setLofiError(false);
-      audioLofi.src = LOFI_URL;
+      audioLofi.src = getLofiUrl(state.selectedLofiStream);
       audioLofi.play().catch(() => {});
     },
     () => setLofiError(true)
@@ -354,7 +364,30 @@ function makeStreamWatcher(audioEl, getName, isPlayingFn, onRetry, onExhausted) 
     });
   });
 
+  // Lo-fi stream switcher
+  const lofiOptions = document.querySelectorAll('.lofi-option');
+
+  function applyLofiStream() {
+    lofiOptions.forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.stream === state.selectedLofiStream);
+    });
+  }
+
+  function switchLofiStream(key) {
+    if (!LOFI_STREAMS[key] || key === state.selectedLofiStream) return;
+    state.selectedLofiStream = key;
+    applyLofiStream();
+    audioLofi.src = getLofiUrl(key);
+    if (state.isPlaying) audioLofi.play().catch(() => {});
+    saveState(state);
+  }
+
+  lofiOptions.forEach(btn => {
+    btn.addEventListener('click', () => switchLofiStream(btn.dataset.stream));
+  });
+
   applyState();
+  applyLofiStream();
   updateMediaSession();
 })();
 
