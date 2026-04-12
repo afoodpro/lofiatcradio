@@ -100,6 +100,15 @@ function saveState(state) {
     navigator.mediaSession.setActionHandler('stop',  () => setPlaying(false));
   }
 
+  // Buffering indicator
+  function setBuffering(buffering) {
+    playBtn.classList.toggle('is-buffering', buffering && state.isPlaying);
+  }
+
+  audioLofi.addEventListener('waiting', () => setBuffering(true));
+  audioLofi.addEventListener('playing', () => setBuffering(false));
+  audioLofi.addEventListener('canplay', () => setBuffering(false));
+
   // Toggle play/pause
   function setPlaying(playing) {
     state.isPlaying = playing;
@@ -127,6 +136,7 @@ function saveState(state) {
       audioAtc.pause();
       iconPlay.classList.remove('icon-hidden');
       iconPause.classList.add('icon-hidden');
+      setBuffering(false);
     }
   }
 

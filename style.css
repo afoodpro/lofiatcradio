@@ -195,6 +195,22 @@ body {
   50%       { box-shadow: 0 4px 20px rgba(0,0,0,0.22); }
 }
 
+/* Buffering ring — subtle rotating arc while audio loads */
+.play-btn.is-buffering::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  border-top-color: rgba(255, 255, 255, 0.5);
+  animation: spin 1s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
 /* Icon crossfade inside play button */
 .play-btn svg {
   position: absolute;
