@@ -48,6 +48,16 @@ function saveState(state) {
   }));
 }
 
+// --- URL helpers ---
+function getStationFromUrl() {
+  try {
+    const code = new URLSearchParams(window.location.search).get('station');
+    return STATIONS[code] ? code : null;
+  } catch (_) {
+    return null;
+  }
+}
+
 // --- Stream resilience ---
 function makeStreamWatcher(audioEl, getName, isPlayingFn, onRetry) {
   const RETRY_DELAY_MS = 5000;
@@ -91,6 +101,10 @@ function makeStreamWatcher(audioEl, getName, isPlayingFn, onRetry) {
 // --- DOM wiring ---
 (function () {
   const state = loadState();
+
+  // URL param overrides saved station (but isn't persisted)
+  const urlStation = getStationFromUrl();
+  if (urlStation) state.selectedStation = urlStation;
 
   const audioLofi = document.getElementById('audio-lofi');
   const audioAtc  = document.getElementById('audio-atc');

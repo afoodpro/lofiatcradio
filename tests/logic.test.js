@@ -121,4 +121,25 @@ assert.strictEqual(s4.atcVolume, 0.7, 'loadState partial: uses default atcVolume
   assert.ok(true, 'playing event resets retry count without error');
 }
 
+// --- getStationFromUrl() tests ---
+const origWindow = global.window;
+
+// 1. Valid station in URL
+global.window = { location: { search: '?station=RJTT' } };
+assert.strictEqual(getStationFromUrl(), 'RJTT', 'getStationFromUrl: valid station code');
+
+// 2. Unknown station code → null
+global.window = { location: { search: '?station=ZZZZ' } };
+assert.strictEqual(getStationFromUrl(), null, 'getStationFromUrl: unknown code returns null');
+
+// 3. No station param → null
+global.window = { location: { search: '' } };
+assert.strictEqual(getStationFromUrl(), null, 'getStationFromUrl: no param returns null');
+
+// 4. Lowercase code → null (codes are uppercase)
+global.window = { location: { search: '?station=kjfk' } };
+assert.strictEqual(getStationFromUrl(), null, 'getStationFromUrl: lowercase code returns null');
+
+global.window = origWindow;
+
 console.log('All tests passed');
