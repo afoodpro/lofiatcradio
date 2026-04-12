@@ -171,28 +171,25 @@ function makeStreamWatcher(audioEl, getName, isPlayingFn, onRetry, onExhausted) 
   const stationName = document.getElementById('station-name');
   const metarInfo = document.getElementById('metar-info');
 
-  // Web Audio API — per-stream volume on iOS (audioEl.volume is read-only on WebKit)
+  // Web Audio API — lofi volume on iOS (audioEl.volume is read-only on WebKit).
+  // Only lofi is routed through the graph: laut.fm sends CORS headers (required by
+  // createMediaElementSource). LiveATC has no CORS, so ATC uses audioEl.volume directly.
   let audioCtx = null;
   let lofiGain = null;
-  let atcGain  = null;
 
   function ensureAudioGraph() {
     if (audioCtx) {
-      // Resume if suspended (phone call, background, etc.)
       if (audioCtx.state === 'suspended') audioCtx.resume();
       return;
     }
     try {
       audioCtx = new (window.AudioContext || window.webkitAudioContext)();
       lofiGain = audioCtx.createGain();
-      atcGain  = audioCtx.createGain();
       lofiGain.gain.value = state.lofiVolume;
-      atcGain.gain.value  = state.atcVolume;
       audioCtx.createMediaElementSource(audioLofi).connect(lofiGain).connect(audioCtx.destination);
-      audioCtx.createMediaElementSource(audioAtc).connect(atcGain).connect(audioCtx.destination);
     } catch (e) {
       console.warn('Web Audio API unavailable:', e);
-      audioCtx = null; lofiGain = null; atcGain = null;
+      audioCtx = null; lofiGain = null;
     }
   }
 
@@ -201,7 +198,7 @@ function makeStreamWatcher(audioEl, getName, isPlayingFn, onRetry, onExhausted) 
   }
 
   function setAtcGain(v) {
-    if (atcGain) atcGain.gain.value = v; else audioAtc.volume = v;
+    audioAtc.volume = v; // liveatc.net has no CORS — Web Audio not applicable; works on desktop
   }
 
   function updateMetar(code) {
