@@ -252,15 +252,6 @@ body {
   pointer-events: none;
 }
 
-.listen-timer {
-  font-size: 10px;
-  letter-spacing: 0.1em;
-  color: rgba(0, 0, 0, 0.3);
-  text-align: center;
-  margin-top: 4px;
-  margin-bottom: 8px;
-}
-
 /* ---- Station list ---- */
 .station-list {
   list-style: none;

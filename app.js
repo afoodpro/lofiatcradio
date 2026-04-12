@@ -4,9 +4,9 @@ const STATIONS = {
   KSFO: { name: 'San Francisco',   url: 'https://s1-fmt2.liveatc.net/ksfo_twr',      lat:  37.62, lon: -122.38 },
   EGLL: { name: 'London Heathrow', url: 'https://s1-fmt2.liveatc.net/egll8_s',       lat:  51.48, lon:   -0.45 },
   KLAX: { name: 'Los Angeles',     url: 'https://s1-fmt2.liveatc.net/klax5_s',       lat:  33.94, lon: -118.41 },
-  OMDB: { name: 'Dubai',           url: 'https://s1-bos.liveatc.net/omdb',           lat:  25.25, lon:   55.36 },
-  RJTT: { name: 'Tokyo Haneda',    url: 'https://s1-fmt2.liveatc.net/rjtt_control',  lat:  35.55, lon:  139.78 },
-  ZSPD: { name: 'Shanghai Pudong', url: 'https://s1-bos.liveatc.net/zspd',           lat:  31.14, lon:  121.81 },
+  KATL: { name: 'Atlanta',         url: 'https://s1-fmt2.liveatc.net/katl_twr',      lat:  33.64, lon:  -84.43 },
+  RJTT: { name: 'Tokyo Haneda',    url: 'https://s1-fmt2.liveatc.net/rjtt_twr',      lat:  35.55, lon:  139.78 },
+  KEWR: { name: 'Newark',          url: 'https://s1-fmt2.liveatc.net/kewr_twr',      lat:  40.69, lon:  -74.17 },
   UNNT: { name: 'Novosibirsk',     url: 'https://s1-fmt2.liveatc.net/unnt',          lat:  55.01, lon:   82.65 },
   URSS: { name: 'Khabarovsk',      url: 'https://s1-bos.liveatc.net/urss',           lat:  48.52, lon:  135.18 },
 };
@@ -170,22 +170,6 @@ function makeStreamWatcher(audioEl, getName, isPlayingFn, onRetry, onExhausted) 
   const stationCode = document.getElementById('station-code');
   const stationName = document.getElementById('station-name');
   const metarInfo = document.getElementById('metar-info');
-  const listenTimerEl = document.getElementById('listen-timer');
-  let listenSeconds = 0;
-  let listenInterval = null;
-
-  function startListenTimer() {
-    if (listenInterval) return;
-    listenInterval = setInterval(() => {
-      listenSeconds++;
-      listenTimerEl.textContent = formatDuration(listenSeconds);
-    }, 1000);
-  }
-
-  function stopListenTimer() {
-    if (listenInterval) { clearInterval(listenInterval); listenInterval = null; }
-  }
-
   function updateMetar(code) {
     metarInfo.textContent = '';
     fetchMetar(code).then(m => {
@@ -243,7 +227,7 @@ function makeStreamWatcher(audioEl, getName, isPlayingFn, onRetry, onExhausted) 
   }
 
   audioLofi.addEventListener('waiting', () => setBuffering(true));
-  audioLofi.addEventListener('playing', () => { setBuffering(false); if (state.isPlaying) startListenTimer(); });
+  audioLofi.addEventListener('playing', () => setBuffering(false));
   audioLofi.addEventListener('canplay', () => setBuffering(false));
 
   // Stream error display
@@ -315,8 +299,7 @@ function makeStreamWatcher(audioEl, getName, isPlayingFn, onRetry, onExhausted) 
         iconPlay.classList.remove('icon-hidden');
         iconPause.classList.add('icon-hidden');
         if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
-        stopListenTimer();
-      });
+        });
       audioAtc.play().catch(err => {
         console.error('ATC stream error:', err);
       });
@@ -331,7 +314,6 @@ function makeStreamWatcher(audioEl, getName, isPlayingFn, onRetry, onExhausted) 
       setLofiError(false);
       setAtcError(state.selectedStation, false);
       cancelSleep();
-      stopListenTimer();
     }
   }
 
