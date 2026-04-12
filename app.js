@@ -56,6 +56,7 @@ function makeStreamWatcher(audioEl, getName, isPlayingFn, onRetry) {
   let retryTimer = null;
 
   function scheduleRetry() {
+    if (retryTimer !== null) return;
     if (!isPlayingFn()) return;
     if (retryCount >= MAX_RETRIES) {
       console.warn(getName() + ': max retries reached, giving up');
@@ -64,16 +65,13 @@ function makeStreamWatcher(audioEl, getName, isPlayingFn, onRetry) {
     retryCount++;
     console.log(getName() + ': retry ' + retryCount + '/' + MAX_RETRIES + ' in ' + RETRY_DELAY_MS + 'ms');
     retryTimer = setTimeout(() => {
+      retryTimer = null;
       if (!isPlayingFn()) return;
       onRetry();
     }, RETRY_DELAY_MS);
   }
 
   audioEl.addEventListener('error', () => {
-    if (isPlayingFn()) scheduleRetry();
-  });
-
-  audioEl.addEventListener('stalled', () => {
     if (isPlayingFn()) scheduleRetry();
   });
 
