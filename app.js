@@ -1,14 +1,14 @@
 // --- Station config ---
 const STATIONS = {
-  KJFK: { name: 'New York JFK',    url: 'https://s1-fmt2.liveatc.net/kjfk9_s' },
-  KSFO: { name: 'San Francisco',   url: 'https://s1-fmt2.liveatc.net/ksfo_twr' },
-  EGLL: { name: 'London Heathrow', url: 'https://s1-fmt2.liveatc.net/egll8_s' },
-  KLAX: { name: 'Los Angeles',     url: 'https://s1-fmt2.liveatc.net/klax5_s' },
-  OMDB: { name: 'Dubai',           url: 'https://s1-bos.liveatc.net/omdb' },
-  RJTT: { name: 'Tokyo Haneda',    url: 'https://s1-fmt2.liveatc.net/rjtt_control' },
-  ZSPD: { name: 'Shanghai Pudong', url: 'https://s1-bos.liveatc.net/zspd' },
-  UNNT: { name: 'Novosibirsk',     url: 'https://s1-fmt2.liveatc.net/unnt' },
-  URSS: { name: 'Khabarovsk',      url: 'https://s1-bos.liveatc.net/urss' },
+  KJFK: { name: 'New York JFK',    url: 'https://s1-fmt2.liveatc.net/kjfk9_s',       lat:  40.64, lon:  -73.78 },
+  KSFO: { name: 'San Francisco',   url: 'https://s1-fmt2.liveatc.net/ksfo_twr',      lat:  37.62, lon: -122.38 },
+  EGLL: { name: 'London Heathrow', url: 'https://s1-fmt2.liveatc.net/egll8_s',       lat:  51.48, lon:   -0.45 },
+  KLAX: { name: 'Los Angeles',     url: 'https://s1-fmt2.liveatc.net/klax5_s',       lat:  33.94, lon: -118.41 },
+  OMDB: { name: 'Dubai',           url: 'https://s1-bos.liveatc.net/omdb',           lat:  25.25, lon:   55.36 },
+  RJTT: { name: 'Tokyo Haneda',    url: 'https://s1-fmt2.liveatc.net/rjtt_control',  lat:  35.55, lon:  139.78 },
+  ZSPD: { name: 'Shanghai Pudong', url: 'https://s1-bos.liveatc.net/zspd',           lat:  31.14, lon:  121.81 },
+  UNNT: { name: 'Novosibirsk',     url: 'https://s1-fmt2.liveatc.net/unnt',          lat:  55.01, lon:   82.65 },
+  URSS: { name: 'Khabarovsk',      url: 'https://s1-bos.liveatc.net/urss',           lat:  48.52, lon:  135.18 },
 };
 
 const LOFI_STREAMS = {
@@ -31,13 +31,19 @@ function formatMetar(m) {
 }
 
 async function fetchMetar(icao) {
+  const s = STATIONS[icao];
+  if (!s) return null;
   try {
-    const res = await fetch(
-      'https://aviationweather.gov/api/data/metar?ids=' + icao + '&format=json'
-    );
+    const url = 'https://api.open-meteo.com/v1/forecast' +
+      '?latitude=' + s.lat + '&longitude=' + s.lon +
+      '&current=temperature_2m,wind_speed_10m,wind_direction_10m' +
+      '&wind_speed_unit=kn&forecast_days=1';
+    const res = await fetch(url);
     if (!res.ok) return null;
     const data = await res.json();
-    return (data && data.length) ? data[0] : null;
+    const c = data.current;
+    if (!c) return null;
+    return { temp: c.temperature_2m, wspd: Math.round(c.wind_speed_10m), wdir: Math.round(c.wind_direction_10m) };
   } catch (_) {
     return null;
   }
