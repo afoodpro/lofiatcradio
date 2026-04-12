@@ -214,4 +214,12 @@ assert.strictEqual(
   'formatMetar temp only when wind missing'
 );
 
+// --- formatDuration() tests ---
+assert.strictEqual(formatDuration(0),    '0s',     'formatDuration 0');
+assert.strictEqual(formatDuration(45),   '45s',    'formatDuration 45s');
+assert.strictEqual(formatDuration(60),   '1m 0s',  'formatDuration 60s = 1m 0s');
+assert.strictEqual(formatDuration(90),   '1m 30s', 'formatDuration 90s');
+assert.strictEqual(formatDuration(3600), '1h 0m',  'formatDuration 1h');
+assert.strictEqual(formatDuration(3723), '1h 2m',  'formatDuration 1h 2m (seconds hidden above 1h)');
+
 console.log('All tests passed');

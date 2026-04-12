@@ -43,6 +43,15 @@ async function fetchMetar(icao) {
   }
 }
 
+function formatDuration(seconds) {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = seconds % 60;
+  if (h > 0) return h + 'h ' + m + 'm';
+  if (m > 0) return m + 'm ' + s + 's';
+  return s + 's';
+}
+
 function getLofiUrl(key) {
   return LOFI_STREAMS[key] ? LOFI_STREAMS[key].url : LOFI_STREAMS.lofi.url;
 }
@@ -155,6 +164,21 @@ function makeStreamWatcher(audioEl, getName, isPlayingFn, onRetry, onExhausted) 
   const stationCode = document.getElementById('station-code');
   const stationName = document.getElementById('station-name');
   const metarInfo = document.getElementById('metar-info');
+  const listenTimerEl = document.getElementById('listen-timer');
+  let listenSeconds = 0;
+  let listenInterval = null;
+
+  function startListenTimer() {
+    if (listenInterval) return;
+    listenInterval = setInterval(() => {
+      listenSeconds++;
+      listenTimerEl.textContent = formatDuration(listenSeconds);
+    }, 1000);
+  }
+
+  function stopListenTimer() {
+    if (listenInterval) { clearInterval(listenInterval); listenInterval = null; }
+  }
 
   function updateMetar(code) {
     metarInfo.textContent = '';
@@ -285,10 +309,12 @@ function makeStreamWatcher(audioEl, getName, isPlayingFn, onRetry, onExhausted) 
         iconPlay.classList.remove('icon-hidden');
         iconPause.classList.add('icon-hidden');
         if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
+        stopListenTimer();
       });
       audioAtc.play().catch(err => {
         console.error('ATC stream error:', err);
       });
+      startListenTimer();
     } else {
       audioLofi.pause();
       audioAtc.pause();
@@ -300,6 +326,7 @@ function makeStreamWatcher(audioEl, getName, isPlayingFn, onRetry, onExhausted) 
       setLofiError(false);
       setAtcError(state.selectedStation, false);
       cancelSleep();
+      stopListenTimer();
     }
   }
 
