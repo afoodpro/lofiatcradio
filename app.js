@@ -2,7 +2,7 @@
 const STATIONS = {
   KJFK: { name: 'New York JFK',    url: 'https://s1-fmt2.liveatc.net/kjfk9_s',       lat:  40.64, lon:  -73.78 },
   KSFO: { name: 'San Francisco',   url: 'https://s1-fmt2.liveatc.net/ksfo_twr',      lat:  37.62, lon: -122.38 },
-  EGLL: { name: 'London Heathrow', url: 'https://s1-fmt2.liveatc.net/egll8_s',       lat:  51.48, lon:   -0.45 },
+  KDTW: { name: 'Detroit',         url: 'https://s1-fmt2.liveatc.net/kdtw_twr',      lat:  42.21, lon:  -83.35 },
   KLAX: { name: 'Los Angeles',     url: 'https://s1-fmt2.liveatc.net/klax5_s',       lat:  33.94, lon: -118.41 },
   KATL: { name: 'Atlanta',         url: 'https://s1-fmt2.liveatc.net/katl_twr',      lat:  33.64, lon:  -84.43 },
   RJTT: { name: 'Tokyo Haneda',    url: 'https://s1-fmt2.liveatc.net/rjtt_twr',      lat:  35.55, lon:  139.78 },
@@ -177,17 +177,24 @@ function makeStreamWatcher(audioEl, getName, isPlayingFn, onRetry, onExhausted) 
   let atcGain  = null;
 
   function ensureAudioGraph() {
-    if (audioCtx) {
-      if (audioCtx.state === 'suspended') audioCtx.resume();
-      return;
+    if (!audioCtx) {
+      try {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        lofiGain = audioCtx.createGain();
+        atcGain  = audioCtx.createGain();
+        lofiGain.gain.value = state.lofiVolume;
+        atcGain.gain.value  = state.atcVolume;
+        audioCtx.createMediaElementSource(audioLofi).connect(lofiGain).connect(audioCtx.destination);
+        audioCtx.createMediaElementSource(audioAtc).connect(atcGain).connect(audioCtx.destination);
+      } catch (e) {
+        console.warn('Web Audio API unavailable:', e);
+        audioCtx = null; lofiGain = null; atcGain = null;
+        return Promise.resolve();
+      }
     }
-    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    lofiGain = audioCtx.createGain();
-    atcGain  = audioCtx.createGain();
-    lofiGain.gain.value = state.lofiVolume;
-    atcGain.gain.value  = state.atcVolume;
-    audioCtx.createMediaElementSource(audioLofi).connect(lofiGain).connect(audioCtx.destination);
-    audioCtx.createMediaElementSource(audioAtc).connect(atcGain).connect(audioCtx.destination);
+    // Must resume before playing — iOS plays bypass the graph if context is suspended
+    if (audioCtx.state === 'suspended') return audioCtx.resume();
+    return Promise.resolve();
   }
 
   function setLofiGain(v) {
@@ -317,20 +324,21 @@ function makeStreamWatcher(audioEl, getName, isPlayingFn, onRetry, onExhausted) 
       navigator.mediaSession.playbackState = playing ? 'playing' : 'paused';
     }
     if (playing) {
-      ensureAudioGraph();
       iconPlay.classList.add('icon-hidden');
       iconPause.classList.remove('icon-hidden');
       iconPause.style.display = '';
-      audioLofi.play().catch(err => {
-        console.error('Lo-fi stream error:', err);
-        state.isPlaying = false;
-        playBtn.classList.remove('is-playing');
-        iconPlay.classList.remove('icon-hidden');
-        iconPause.classList.add('icon-hidden');
-        if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
+      ensureAudioGraph().then(() => {
+        audioLofi.play().catch(err => {
+          console.error('Lo-fi stream error:', err);
+          state.isPlaying = false;
+          playBtn.classList.remove('is-playing');
+          iconPlay.classList.remove('icon-hidden');
+          iconPause.classList.add('icon-hidden');
+          if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
         });
-      audioAtc.play().catch(err => {
-        console.error('ATC stream error:', err);
+        audioAtc.play().catch(err => {
+          console.error('ATC stream error:', err);
+        });
       });
     } else {
       audioLofi.pause();
@@ -385,6 +393,7 @@ function makeStreamWatcher(audioEl, getName, isPlayingFn, onRetry, onExhausted) 
   lofiSlider.addEventListener('input', () => {
     state.lofiVolume = parseFloat(lofiSlider.value);
     setLofiGain(state.lofiVolume);
+    if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
     lofiSlider.style.setProperty('--val', state.lofiVolume * 100);
     saveState(state);
   });
@@ -392,6 +401,7 @@ function makeStreamWatcher(audioEl, getName, isPlayingFn, onRetry, onExhausted) 
   atcSlider.addEventListener('input', () => {
     state.atcVolume = parseFloat(atcSlider.value);
     setAtcGain(state.atcVolume);
+    if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
     atcSlider.style.setProperty('--val', state.atcVolume * 100);
     saveState(state);
   });
