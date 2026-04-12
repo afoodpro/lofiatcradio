@@ -177,24 +177,23 @@ function makeStreamWatcher(audioEl, getName, isPlayingFn, onRetry, onExhausted) 
   let atcGain  = null;
 
   function ensureAudioGraph() {
-    if (!audioCtx) {
-      try {
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        lofiGain = audioCtx.createGain();
-        atcGain  = audioCtx.createGain();
-        lofiGain.gain.value = state.lofiVolume;
-        atcGain.gain.value  = state.atcVolume;
-        audioCtx.createMediaElementSource(audioLofi).connect(lofiGain).connect(audioCtx.destination);
-        audioCtx.createMediaElementSource(audioAtc).connect(atcGain).connect(audioCtx.destination);
-      } catch (e) {
-        console.warn('Web Audio API unavailable:', e);
-        audioCtx = null; lofiGain = null; atcGain = null;
-        return Promise.resolve();
-      }
+    if (audioCtx) {
+      // Resume if suspended (phone call, background, etc.)
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      return;
     }
-    // Must resume before playing — iOS plays bypass the graph if context is suspended
-    if (audioCtx.state === 'suspended') return audioCtx.resume();
-    return Promise.resolve();
+    try {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      lofiGain = audioCtx.createGain();
+      atcGain  = audioCtx.createGain();
+      lofiGain.gain.value = state.lofiVolume;
+      atcGain.gain.value  = state.atcVolume;
+      audioCtx.createMediaElementSource(audioLofi).connect(lofiGain).connect(audioCtx.destination);
+      audioCtx.createMediaElementSource(audioAtc).connect(atcGain).connect(audioCtx.destination);
+    } catch (e) {
+      console.warn('Web Audio API unavailable:', e);
+      audioCtx = null; lofiGain = null; atcGain = null;
+    }
   }
 
   function setLofiGain(v) {
@@ -324,21 +323,20 @@ function makeStreamWatcher(audioEl, getName, isPlayingFn, onRetry, onExhausted) 
       navigator.mediaSession.playbackState = playing ? 'playing' : 'paused';
     }
     if (playing) {
+      ensureAudioGraph();
       iconPlay.classList.add('icon-hidden');
       iconPause.classList.remove('icon-hidden');
       iconPause.style.display = '';
-      ensureAudioGraph().then(() => {
-        audioLofi.play().catch(err => {
-          console.error('Lo-fi stream error:', err);
-          state.isPlaying = false;
-          playBtn.classList.remove('is-playing');
-          iconPlay.classList.remove('icon-hidden');
-          iconPause.classList.add('icon-hidden');
-          if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
-        });
-        audioAtc.play().catch(err => {
-          console.error('ATC stream error:', err);
-        });
+      audioLofi.play().catch(err => {
+        console.error('Lo-fi stream error:', err);
+        state.isPlaying = false;
+        playBtn.classList.remove('is-playing');
+        iconPlay.classList.remove('icon-hidden');
+        iconPause.classList.add('icon-hidden');
+        if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
+      });
+      audioAtc.play().catch(err => {
+        console.error('ATC stream error:', err);
       });
     } else {
       audioLofi.pause();
