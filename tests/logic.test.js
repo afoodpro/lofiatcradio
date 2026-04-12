@@ -185,4 +185,33 @@ assert.strictEqual(
   'getLofiUrl: unknown key falls back to lofi'
 );
 
+// --- formatWind() tests ---
+assert.strictEqual(formatWind(270, 15), 'W 15kt',  'formatWind W 15kt');
+assert.strictEqual(formatWind(0, 0),    'CALM',     'formatWind calm');
+assert.strictEqual(formatWind(360, 10), 'N 10kt',   'formatWind 360 = N');
+assert.strictEqual(formatWind(45, 8),   'NE 8kt',   'formatWind NE');
+assert.strictEqual(formatWind(180, 20), 'S 20kt',   'formatWind S');
+
+// --- formatMetar() tests ---
+assert.strictEqual(
+  formatMetar({ temp: 10, wdir: 270, wspd: 15 }),
+  '10°C · W 15kt',
+  'formatMetar temp+wind'
+);
+assert.strictEqual(
+  formatMetar({ temp: -3, wdir: 0, wspd: 0 }),
+  '-3°C · CALM',
+  'formatMetar negative temp + calm'
+);
+assert.strictEqual(
+  formatMetar({ temp: null, wdir: null, wspd: null }),
+  '',
+  'formatMetar all null returns empty string'
+);
+assert.strictEqual(
+  formatMetar({ temp: 22, wdir: null, wspd: null }),
+  '22°C',
+  'formatMetar temp only when wind missing'
+);
+
 console.log('All tests passed');

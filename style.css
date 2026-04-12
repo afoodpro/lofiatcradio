@@ -166,6 +166,15 @@ body {
   transition: opacity 0.2s ease;
 }
 
+.metar-info {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: oklch(from var(--text) l c h / 0.5);
+  min-height: 14px;
+  margin-top: 4px;
+  transition: opacity 0.3s;
+}
+
 .station-code.fading,
 .station-name.fading {
   opacity: 0;

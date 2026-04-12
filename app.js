@@ -17,6 +17,32 @@ const LOFI_STREAMS = {
   ambient: { name: 'Ambient', url: 'https://ambient.stream.laut.fm/ambient' },
 };
 
+// --- METAR helpers ---
+function formatWind(dir, spd) {
+  if (dir === 0 && spd === 0) return 'CALM';
+  const dirs = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+  return dirs[Math.round(dir / 45) % 8] + ' ' + spd + 'kt';
+}
+
+function formatMetar(m) {
+  const temp = m.temp != null ? Math.round(m.temp) + '°C' : null;
+  const wind = (m.wspd != null && m.wdir != null) ? formatWind(m.wdir, m.wspd) : null;
+  return [temp, wind].filter(Boolean).join(' · ');
+}
+
+async function fetchMetar(icao) {
+  try {
+    const res = await fetch(
+      'https://aviationweather.gov/api/data/metar?ids=' + icao + '&format=json'
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    return (data && data.length) ? data[0] : null;
+  } catch (_) {
+    return null;
+  }
+}
+
 function getLofiUrl(key) {
   return LOFI_STREAMS[key] ? LOFI_STREAMS[key].url : LOFI_STREAMS.lofi.url;
 }
@@ -128,6 +154,17 @@ function makeStreamWatcher(audioEl, getName, isPlayingFn, onRetry, onExhausted) 
   const iconPause = document.getElementById('icon-pause');
   const stationCode = document.getElementById('station-code');
   const stationName = document.getElementById('station-name');
+  const metarInfo = document.getElementById('metar-info');
+
+  function updateMetar(code) {
+    metarInfo.textContent = '';
+    fetchMetar(code).then(m => {
+      if (!m) return;
+      const text = formatMetar(m);
+      if (text) metarInfo.textContent = text;
+    });
+  }
+
   const stationItems = document.querySelectorAll('.station-item');
   const lofiSlider = document.getElementById('lofi-vol');
   const atcSlider  = document.getElementById('atc-vol');
@@ -154,6 +191,7 @@ function makeStreamWatcher(audioEl, getName, isPlayingFn, onRetry, onExhausted) 
     // audio sources
     audioLofi.src = getLofiUrl(state.selectedLofiStream);
     audioAtc.src  = getAtcUrl(state.selectedStation);
+    updateMetar(state.selectedStation);
   }
 
   // Media Session API — lock screen / car display / Bluetooth controls
@@ -290,6 +328,7 @@ function makeStreamWatcher(audioEl, getName, isPlayingFn, onRetry, onExhausted) 
     if (state.isPlaying) audioAtc.play();
 
     updateMediaSession();
+    updateMetar(code);
     saveState(state);
   }
 
