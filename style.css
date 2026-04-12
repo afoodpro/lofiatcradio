@@ -169,7 +169,7 @@ body {
 .metar-info {
   font-size: 10px;
   letter-spacing: 0.08em;
-  color: oklch(from var(--text) l c h / 0.5);
+  color: rgba(245, 240, 232, 0.45);
   min-height: 14px;
   margin-top: 4px;
   transition: opacity 0.3s;
