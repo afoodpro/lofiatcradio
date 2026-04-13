@@ -161,7 +161,7 @@ function makeStreamWatcher(audioEl, getName, isPlayingFn, onRetry, onExhausted) 
   // iOS Safari: audioEl.volume is read-only, Web Audio can't route non-CORS streams.
   // Fix volumes at known-good levels and hide sliders entirely.
   const isIOS = /iP(hone|ad|od)/.test(navigator.userAgent);
-  const IOS_LOFI_VOL = 0.68;
+  const IOS_LOFI_VOL = 0.5;
   const IOS_ATC_VOL  = 1.0;
 
   // URL param overrides saved station (but isn't persisted)
