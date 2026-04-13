@@ -163,7 +163,7 @@ body {
 .live-dot {
   width: 7px;
   height: 7px;
-  background: var(--c-ink);
+  background: oklch(62% 0.18 145);
   border-radius: 50%;
   flex-shrink: 0;
   animation: blink 2.4s ease-in-out infinite;
@@ -383,7 +383,7 @@ body {
   width: 4px;
   height: 4px;
   border-radius: 50%;
-  background: oklch(62% 0.18 145);
+  background: var(--c-ink);
   transform: translateY(-50%) scale(0);
   opacity: 0;
   transition:
