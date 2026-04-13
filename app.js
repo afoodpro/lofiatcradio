@@ -267,7 +267,39 @@ function makeStreamWatcher(audioEl, getName, isPlayingFn, onRetry, onExhausted) 
     navigator.mediaSession.setActionHandler('play',  () => setPlaying(true));
     navigator.mediaSession.setActionHandler('pause', () => setPlaying(false));
     navigator.mediaSession.setActionHandler('stop',  () => setPlaying(false));
+
+    // Steering wheel / headunit prev/next → cycle through ATC stations
+    const stationKeys = Object.keys(STATIONS);
+    navigator.mediaSession.setActionHandler('previoustrack', () => {
+      const idx = stationKeys.indexOf(state.selectedStation);
+      switchStation(stationKeys[(idx - 1 + stationKeys.length) % stationKeys.length]);
+    });
+    navigator.mediaSession.setActionHandler('nexttrack', () => {
+      const idx = stationKeys.indexOf(state.selectedStation);
+      switchStation(stationKeys[(idx + 1) % stationKeys.length]);
+    });
   }
+
+  // Auto-resume after external audio interruption (Bluetooth disconnect/reconnect,
+  // CarPlay handoff, navigation announcement, phone call end, etc.)
+  // When the system pauses audio without user intent, state.isPlaying stays true —
+  // we detect this and schedule a play attempt after the interruption clears.
+  function handleExternalPause(audioEl, getUrl) {
+    audioEl.addEventListener('pause', () => {
+      if (!state.isPlaying) return; // user-initiated pause — do nothing
+      setTimeout(() => {
+        if (!state.isPlaying || !audioEl.paused) return;
+        audioEl.play().catch(() => {
+          // play() rejected (e.g. stream dropped mid-interruption) — reload src and retry
+          audioEl.src = getUrl();
+          audioEl.play().catch(() => {});
+        });
+      }, 800);
+    });
+  }
+
+  handleExternalPause(audioLofi, () => getLofiUrl(state.selectedLofiStream));
+  handleExternalPause(audioAtc,  () => getAtcUrl(state.selectedStation));
 
   // Buffering indicator
   function setBuffering(buffering) {
