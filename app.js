@@ -184,6 +184,11 @@ function makeStreamWatcher(audioEl, getName, isPlayingFn, onRetry, onExhausted) 
   let lofiGain = null;
 
   function ensureAudioGraph() {
+    // On iOS, AudioContext conflicts with CarPlay/Bluetooth audio routing —
+    // the system repeatedly suspends the context causing constant play/pause stutter.
+    // iOS volume is fixed (IOS_LOFI_VOL) and sliders are hidden, so GainNode is not needed.
+    if (isIOS) return;
+
     if (audioCtx) {
       if (audioCtx.state === 'suspended') audioCtx.resume();
       return;
@@ -193,17 +198,6 @@ function makeStreamWatcher(audioEl, getName, isPlayingFn, onRetry, onExhausted) 
       lofiGain = audioCtx.createGain();
       lofiGain.gain.value = state.lofiVolume;
       audioCtx.createMediaElementSource(audioLofi).connect(lofiGain).connect(audioCtx.destination);
-
-      // iOS/CarPlay: system suspends AudioContext on BT reconnect, navigation, calls etc.
-      // Audio element may keep playing internally but GainNode output goes silent.
-      // Resume the context as soon as system releases the interruption.
-      audioCtx.addEventListener('statechange', () => {
-        if (audioCtx.state === 'suspended' && state.isPlaying) {
-          audioCtx.resume().then(() => {
-            if (state.isPlaying && audioLofi.paused) audioLofi.play().catch(() => {});
-          }).catch(() => {});
-        }
-      });
     } catch (e) {
       console.warn('Web Audio API unavailable:', e);
       audioCtx = null; lofiGain = null;
