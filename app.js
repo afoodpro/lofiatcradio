@@ -212,7 +212,12 @@ function makeStreamWatcher(audioEl, getName, isPlayingFn, onRetry, onExhausted) 
     fetchMetar(code).then(m => {
       if (!m) return;
       const text = formatMetar(m);
-      if (text) metarInfo.textContent = text;
+      if (text) {
+        metarInfo.textContent = text;
+        metarInfo.classList.remove('metar-in');
+        void metarInfo.offsetWidth; // force reflow to restart animation
+        metarInfo.classList.add('metar-in');
+      }
     }).catch(() => {});
   }
 
@@ -376,7 +381,7 @@ function makeStreamWatcher(audioEl, getName, isPlayingFn, onRetry, onExhausted) 
       stationName.textContent = STATIONS[code].name;
       stationCode.classList.remove('fading');
       stationName.classList.remove('fading');
-    }, 200);
+    }, 130); // matches --t-fast (110ms) + small buffer
 
     stationItems.forEach(item => {
       item.classList.toggle('active', item.dataset.code === code);
