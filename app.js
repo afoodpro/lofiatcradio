@@ -158,6 +158,12 @@ function makeStreamWatcher(audioEl, getName, isPlayingFn, onRetry, onExhausted) 
 (function () {
   const state = loadState();
 
+  // iOS Safari: audioEl.volume is read-only, Web Audio can't route non-CORS streams.
+  // Fix volumes at known-good levels and hide sliders entirely.
+  const isIOS = /iP(hone|ad|od)/.test(navigator.userAgent);
+  const IOS_LOFI_VOL = 0.68;
+  const IOS_ATC_VOL  = 1.0;
+
   // URL param overrides saved station (but isn't persisted)
   const urlStation = getStationFromUrl();
   if (urlStation) state.selectedStation = urlStation;
@@ -217,12 +223,18 @@ function makeStreamWatcher(audioEl, getName, isPlayingFn, onRetry, onExhausted) 
   // Apply initial state to DOM
   function applyState() {
     // volumes
-    setLofiGain(state.lofiVolume);
-    setAtcGain(state.atcVolume);
-    lofiSlider.value = state.lofiVolume;
-    atcSlider.value  = state.atcVolume;
-    lofiSlider.style.setProperty('--val', state.lofiVolume * 100);
-    atcSlider.style.setProperty('--val', state.atcVolume * 100);
+    if (isIOS) {
+      setLofiGain(IOS_LOFI_VOL);
+      setAtcGain(IOS_ATC_VOL);
+      document.querySelector('.volumes').style.display = 'none';
+    } else {
+      setLofiGain(state.lofiVolume);
+      setAtcGain(state.atcVolume);
+      lofiSlider.value = state.lofiVolume;
+      atcSlider.value  = state.atcVolume;
+      lofiSlider.style.setProperty('--val', state.lofiVolume * 100);
+      atcSlider.style.setProperty('--val', state.atcVolume * 100);
+    }
 
     // station header
     stationCode.textContent = state.selectedStation;
