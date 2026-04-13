@@ -1,4 +1,4 @@
-const CACHE = 'lofiatc-v10';
+const CACHE = 'lofiatc-v11';
 
 const SHELL = [
   '/lofiatcradio/',
