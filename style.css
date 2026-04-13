@@ -562,6 +562,20 @@ body {
   transform: rotate(15deg);
 }
 
+/* ---- Mobile touch targets ---- */
+@media (pointer: coarse) {
+  .lofi-option,
+  .sleep-option {
+    padding: 10px 6px;
+    margin: -10px -6px;
+  }
+
+  .lofi-options,
+  .sleep-options {
+    gap: 20px;
+  }
+}
+
 /* ---- Reduced motion ---- */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
