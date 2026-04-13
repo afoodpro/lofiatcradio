@@ -383,7 +383,7 @@ body {
   width: 4px;
   height: 4px;
   border-radius: 50%;
-  background: var(--c-ink);
+  background: oklch(62% 0.18 145);
   transform: translateY(-50%) scale(0);
   opacity: 0;
   transition:
