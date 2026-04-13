@@ -193,6 +193,17 @@ function makeStreamWatcher(audioEl, getName, isPlayingFn, onRetry, onExhausted) 
       lofiGain = audioCtx.createGain();
       lofiGain.gain.value = state.lofiVolume;
       audioCtx.createMediaElementSource(audioLofi).connect(lofiGain).connect(audioCtx.destination);
+
+      // iOS/CarPlay: system suspends AudioContext on BT reconnect, navigation, calls etc.
+      // Audio element may keep playing internally but GainNode output goes silent.
+      // Resume the context as soon as system releases the interruption.
+      audioCtx.addEventListener('statechange', () => {
+        if (audioCtx.state === 'suspended' && state.isPlaying) {
+          audioCtx.resume().then(() => {
+            if (state.isPlaying && audioLofi.paused) audioLofi.play().catch(() => {});
+          }).catch(() => {});
+        }
+      });
     } catch (e) {
       console.warn('Web Audio API unavailable:', e);
       audioCtx = null; lofiGain = null;
@@ -289,11 +300,17 @@ function makeStreamWatcher(audioEl, getName, isPlayingFn, onRetry, onExhausted) 
       if (!state.isPlaying) return; // user-initiated pause — do nothing
       setTimeout(() => {
         if (!state.isPlaying || !audioEl.paused) return;
-        audioEl.play().catch(() => {
-          // play() rejected (e.g. stream dropped mid-interruption) — reload src and retry
-          audioEl.src = getUrl();
-          audioEl.play().catch(() => {});
-        });
+        // Make sure AudioContext is running before attempting play
+        const resume = (audioCtx && audioCtx.state === 'suspended')
+          ? audioCtx.resume()
+          : Promise.resolve();
+        resume.then(() => {
+          audioEl.play().catch(() => {
+            // play() rejected — stream dropped during interruption, reload and retry
+            audioEl.src = getUrl();
+            audioEl.play().catch(() => {});
+          });
+        }).catch(() => {});
       }, 800);
     });
   }
