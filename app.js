@@ -5,7 +5,7 @@ const STATIONS = {
   KDTW: { name: 'Detroit',         url: 'https://s1-fmt2.liveatc.net/kdtw_twr',      lat:  42.21, lon:  -83.35 },
   KLAX: { name: 'Los Angeles',     url: 'https://s1-fmt2.liveatc.net/klax5_s',       lat:  33.94, lon: -118.41 },
   KATL: { name: 'Atlanta',         url: 'https://s1-fmt2.liveatc.net/katl_twr',      lat:  33.64, lon:  -84.43 },
-  RJTT: { name: 'Tokyo Haneda',    url: 'https://s1-fmt2.liveatc.net/rjtt_twr',      lat:  35.55, lon:  139.78 },
+  RJTT: { name: 'Tokyo Haneda',    url: 'https://s1-fmt2.liveatc.net/rjtt_app_dep',  lat:  35.55, lon:  139.78 },
   KEWR: { name: 'Newark',          url: 'https://s1-fmt2.liveatc.net/kewr_twr',      lat:  40.69, lon:  -74.17 },
   UNNT: { name: 'Novosibirsk',     url: 'https://s1-fmt2.liveatc.net/unnt',          lat:  55.01, lon:   82.65 },
   URSS: { name: 'Khabarovsk',      url: 'https://s1-bos.liveatc.net/urss',           lat:  48.52, lon:  135.18 },
