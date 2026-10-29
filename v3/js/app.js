@@ -16,6 +16,8 @@ const CLOCK_CHECK_MS = 5000;
 const SLEEP_FADE_MS = 8000;
 const HINT_MS = 3000;
 const KEY_FLASH_MS = 160;
+const STATION_RETRY_MS = [2000, 5000, 10000]; // дальше — раз в 30 с
+const STATION_RETRY_LAST_MS = 30000;
 const SLEEP_TEXT = ['OFF', '30 MIN', '60 MIN', '90 MIN'];
 
 const $ = (id) => document.getElementById(id);
@@ -37,7 +39,8 @@ let sleepTimer = null;
 
 // ---- звуки интерфейса (от громкости потоков и mute не зависят) ----
 const sounds = createUiSounds();
-const onFlip = () => sounds.flap();
+// Табло щёлкает и на скрытой странице (заблокированный телефон): тогда клики без картинки не нужны.
+const onFlip = () => { if (document.visibilityState === 'visible') sounds.flap(); };
 
 // ---- табло ----
 const rows = {
@@ -75,6 +78,7 @@ setInterval(() => {
 // ---- катушка-радар ----
 const reel = createReel($('reel'));
 const radarFeed = createRadarFeed({
+  playing: false,
   onUpdate({ nm, status, blips }) {
     reel.setAircraft(blips);
     reel.setRangeNm(nm);
@@ -89,6 +93,7 @@ const keyPlay = $('key-play');
 // ---- аудио ----
 const audio = createAudio({
   ios,
+  autoResume: !ios, // iOS: после внешней паузы не возобновляем сами — движок встаёт на паузу, одно нажатие продолжает
   onState(s) {
     const wasOff = atc === 'off';
     playing = s.playing;
@@ -99,6 +104,7 @@ const audio = createAudio({
     }
     keyPlay.setAttribute('aria-pressed', String(playing));
     reel.setPlaying(playing);
+    radarFeed.setPlaying(playing);
     if (mediaSession) mediaSession.playbackState = playing ? 'playing' : 'paused';
     if (wasOff !== (atc === 'off')) {
       const st = shownStation();
@@ -111,7 +117,7 @@ const audio = createAudio({
 let ready = false;
 
 function play() {
-  if (!ready) return;
+  if (!ready || playing) return; // уже играет (напр. Media Session play при подключении к машине)
   audio.play(); // синхронно в обработчике жеста (iOS)
 }
 
@@ -130,7 +136,9 @@ const announce = $('announce');
 function updateMediaMetadata(st) {
   if (!mediaSession || typeof MediaMetadata === 'undefined') return;
   try {
-    mediaSession.metadata = new MediaMetadata({ title: `${st.city} ATC`, artist: 'ATC Live Radio', album: st.code });
+    mediaSession.metadata = new MediaMetadata({ title: `${st.city} ATC`, artist: 'ATC Live Radio', album: st.code,
+      artwork: [{ src: new URL('icons/icon-512.png', location.href).href, sizes: '512x512', type: 'image/png' }],
+    });
   } catch { /* старый браузер */ }
 }
 
@@ -283,19 +291,30 @@ let sleepKnob = null;
 
 function cancelSleep() {
   if (sleepTimer !== null) { clearTimeout(sleepTimer); sleepTimer = null; }
+  sleepDeadlineAt = null;
   sleepKnob?.setValue(0);
+}
+
+let sleepDeadlineAt = null;
+
+function fireSleep() {
+  if (sleepTimer !== null) { clearTimeout(sleepTimer); sleepTimer = null; }
+  sleepDeadlineAt = null;
+  sleepKnob.setValue(0);
+  audio.fadeOutAndPause(SLEEP_FADE_MS);
 }
 
 function setSleep(minutes) {
   if (sleepTimer !== null) { clearTimeout(sleepTimer); sleepTimer = null; }
-  const deadline = sleepDeadline(Date.now(), minutes);
-  if (deadline === null) return;
-  sleepTimer = setTimeout(() => {
-    sleepTimer = null;
-    sleepKnob.setValue(0);
-    audio.fadeOutAndPause(SLEEP_FADE_MS);
-  }, deadline - Date.now());
+  sleepDeadlineAt = sleepDeadline(Date.now(), minutes);
+  if (sleepDeadlineAt === null) return;
+  sleepTimer = setTimeout(fireSleep, sleepDeadlineAt - Date.now());
 }
+
+// На заблокированном iPhone один длинный setTimeout может «проспать» срок: страхуемся проверкой по часам.
+setInterval(() => {
+  if (sleepDeadlineAt !== null && Date.now() >= sleepDeadlineAt) fireSleep();
+}, CLOCK_CHECK_MS);
 
 sleepKnob = createKnob($('knob-sleep'), {
   label: 'Sleep timer',
@@ -319,13 +338,21 @@ volumeKnob('atc', 'ATC');
 audio.setVolume('lofi', state.lofi);
 audio.setVolume('atc', state.atc);
 
-async function start() {
-  try {
-    stations = await loadStations();
-  } catch {
-    rows.city.set('NO STATIONS');
-    return;
+// Список станций не загрузился — пробуем снова (2 с, 5 с, 10 с, дальше раз в 30 с): в PWA на iOS кнопки перезагрузки нет.
+async function loadStationsWithRetry() {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await loadStations();
+    } catch {
+      rows.city.set('NO STATIONS');
+      const wait = STATION_RETRY_MS[attempt] ?? STATION_RETRY_LAST_MS;
+      await new Promise((resolve) => setTimeout(resolve, wait));
+    }
   }
+}
+
+async function start() {
+  stations = await loadStationsWithRetry();
   const loaded = loadState(storage, location.search, stations.map((s) => s.code));
   state = volumesTouched ? { ...loaded, lofi: state.lofi, atc: state.atc } : loaded;
   shownCode = state.station;
