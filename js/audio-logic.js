@@ -1,4 +1,4 @@
-export const LOFI_URL = 'https://lofi.stream.laut.fm/lofi';
+export const LOFI_URL = 'https://radiorecord.hostingradio.ru/lofi96.aacp';
 export const IOS_LEVELS = { lofi: 0.5, atc: 1.0 };
 
 const RETRY_DELAYS = [2000, 5000, 10000, 20000, 30000];

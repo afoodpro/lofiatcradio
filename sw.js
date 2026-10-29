@@ -1,7 +1,7 @@
 // Service worker ATC Live Radio v3. Лежит в корне сайта, scope — /lofiatcradio/ (тот же, что был у v2):
 // браузер находит его как обновление воркера v2 и при первом открытии переводит устройство на v3.
 // CACHE нужно поднимать при каждом изменении списка SHELL.
-const CACHE = 'lofiatc-v3-9';
+const CACHE = 'lofiatc-v3-10';
 
 const SHELL = [
   './',
@@ -47,7 +47,7 @@ const SHELL = [
 ];
 
 // Эфир, лофи-поток и радар — всегда напрямую, мимо кеша.
-const BYPASS_HOSTS = ['liveatc.net', 'laut.fm', 'radar.afood.pro'];
+const BYPASS_HOSTS = ['liveatc.net', 'hostingradio.ru', 'radar.afood.pro'];
 const NETWORK_TIMEOUT_MS = 4000;
 
 self.addEventListener('install', (event) => {

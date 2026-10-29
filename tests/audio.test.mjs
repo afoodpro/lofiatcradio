@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { isIOS, retryDelay, stallCheck, atcStatus, lampState, LOFI_URL, IOS_LEVELS } from '../js/audio-logic.js';
 
-test('константы', () => { assert.equal(LOFI_URL, 'https://lofi.stream.laut.fm/lofi'); assert.deepEqual(IOS_LEVELS, {lofi: 0.5, atc: 1.0}); });
+test('константы', () => { assert.equal(LOFI_URL, 'https://radiorecord.hostingradio.ru/lofi96.aacp'); assert.deepEqual(IOS_LEVELS, {lofi: 0.5, atc: 1.0}); });
 test('isIOS', () => { assert.ok(isIOS({userAgent:'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)',platform:'iPhone',maxTouchPoints:5}));
   assert.ok(isIOS({userAgent:'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)',platform:'MacIntel',maxTouchPoints:5}));
   assert.ok(!isIOS({userAgent:'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)',platform:'MacIntel',maxTouchPoints:0})); });
