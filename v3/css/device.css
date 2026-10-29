@@ -85,8 +85,8 @@ body {
   height: var(--dh);
   display: flex;
   flex-direction: column;
-  justify-content: space-evenly;
-  padding: calc(var(--u) * 6) calc(var(--u) * 5) calc(var(--u) * 6.5);
+  justify-content: center;
+  padding: calc(var(--u) * 5) calc(var(--u) * 5) calc(var(--u) * 7.5);
   background: var(--body);
 }
 
@@ -111,8 +111,9 @@ body {
   pointer-events: none;
 }
 
-/* всё на корпусе лежит поверх швов */
+/* всё на корпусе лежит поверх швов: швы видны только на самой панели */
 .reel-cell > .window, .board, .controls { position: relative; z-index: 1; }
+.device::before, .reel-cell::before { z-index: 0; }
 
 .reel-cell::before {
   content: '';
@@ -130,8 +131,8 @@ body {
 .brand {
   position: absolute;
   z-index: 2;
-  top: calc(var(--u) * 6);
-  left: calc(var(--u) * 6);
+  top: calc(var(--u) * 1);
+  left: calc(var(--u) * 1);
   pointer-events: none;
 }
 
@@ -174,8 +175,10 @@ body {
 /* ---------- катушка-радар ---------- */
 .reel-cell {
   position: relative;
-  flex: 0 1 calc(var(--u) * 85);
+  /* растёт на высоких экранах, но не дальше 100u: катушка, табло и ручки остаются одной группой */
+  flex: 1 1 calc(var(--u) * 85);
   min-height: 0;
+  max-height: calc(var(--u) * 100);
   container-type: size;
   display: grid;
   place-items: center;
@@ -184,8 +187,11 @@ body {
 /* Окно — квадрат по меньшей стороне ячейки; размер canvas задаёт CSS, а не его bitmap. */
 .window {
   position: relative;
-  width: min(100cqw, 100cqh);
-  height: min(100cqw, 100cqh);
+  /* без container queries (iOS < 16) — фиксированный размер, иначе окно схлопнется в 0 */
+  width: calc(var(--u) * 80);
+  height: calc(var(--u) * 80);
+  width: min(100cqw, 100cqh, calc(var(--u) * 86));
+  height: min(100cqw, 100cqh, calc(var(--u) * 86));
   border-radius: 50%;
   background: var(--seat);
   box-shadow: 0 0 0 calc(var(--u) * 0.9) var(--seat), 0 0 0 calc(var(--u) * 0.9 + 1px) rgba(20, 24, 20, 0.08);
@@ -207,7 +213,7 @@ body {
   flex-direction: column;
   align-items: stretch;
   gap: calc(var(--u) * 1.5);
-  margin: calc(var(--u) * 4) 0 0;
+  margin: 0;
   padding: calc(var(--u) * 2.6);
   border: 0;
   border-radius: calc(var(--u) * 1.6);
@@ -301,6 +307,14 @@ body {
   margin-top: -0.5px;
   background: var(--flap-split);
   z-index: 3;
+}
+
+/* табло и нижний ряд — одна группа под катушкой */
+.deck {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  margin-top: calc(var(--u) * 4);
 }
 
 /* ---------- нижний ряд ---------- */
@@ -415,21 +429,26 @@ body {
 
 /* подсказка про громкость на iPhone — под ручками */
 .hint {
+  /* только под двумя ручками громкости, в две строки — не залезает на иконку Telegram */
   position: absolute;
   top: 100%;
   right: 0;
-  margin: calc(var(--u) * 0.8) 0 0;
-  font-size: calc(var(--u) * 3);
-  line-height: 1;
+  width: calc(var(--u) * 36);
+  margin: calc(var(--u) * 0.6) 0 0;
+  font-size: calc(var(--u) * 2.8);
+  line-height: 1.05;
   letter-spacing: 0.04em;
+  text-align: center;
+  text-wrap: balance;
   color: var(--sub);
-  white-space: nowrap;
   opacity: 0;
   transition: opacity 0.2s;
   pointer-events: none;
 }
 
 .hint.is-shown { opacity: 1; }
+
+.key:disabled { cursor: default; opacity: 0.5; }
 
 /* ---------- Telegram ---------- */
 .tg {

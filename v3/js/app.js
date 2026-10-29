@@ -100,7 +100,11 @@ const audio = createAudio({
   },
 });
 
+// Пока список станций не загружен, PLAY выключена: иначе на iOS эфир позже стартовал бы без жеста пользователя.
+let ready = false;
+
 function play() {
+  if (!ready) return;
   audio.play(); // синхронно в обработчике жеста (iOS)
 }
 
@@ -166,13 +170,25 @@ keyPrev.addEventListener('click', () => step(-1));
 keyNext.addEventListener('click', () => step(1));
 $('board').addEventListener('click', () => step(1));
 
+// Как фокус попал на кнопку: с клавиатуры (Tab) или кликом/тапом. :focus-visible здесь не годится —
+// Chrome включает его на кнопке, полученной кликом, при первом же нажатии клавиши.
+const POINTER_FOCUS_MS = 600;
+let pointerAt = -Infinity;
+let keyboardFocused = null;
+document.addEventListener('pointerdown', () => { pointerAt = performance.now(); }, true);
+document.addEventListener('focusin', (e) => {
+  keyboardFocused = performance.now() - pointerAt > POINTER_FOCUS_MS ? e.target : null;
+}, true);
+
 document.addEventListener('keydown', (e) => {
   if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey) return;
   const t = e.target;
   if (t instanceof Element && t.closest('.knob')) return; // ручка сама обрабатывает клавиши
-  const onControl = t instanceof Element && t.closest('button, a, input, textarea, select');
+  const control = t instanceof Element ? t.closest('button, a, input, textarea, select') : null;
   if (e.key === ' ' || e.code === 'Space') {
-    if (onControl) return; // пробел на кнопке нажимает саму кнопку
+    // Пробел нажимает саму кнопку, только если на неё пришли с клавиатуры (Tab);
+    // после клика мышью фокус тоже на кнопке, но пробел — это play/pause.
+    if (control && control === keyboardFocused) return;
     e.preventDefault();
     if (!e.repeat) togglePlay();
   } else if (e.key === 'ArrowRight') {
@@ -202,14 +218,13 @@ if (mediaSession) {
 const sounds = createKnobSounds();
 const hint = $('hint');
 let hintShown = false;
-let hintTimer = null;
 
 function showIosHint() {
   if (hintShown) return;
   hintShown = true;
   hint.textContent = 'Volume on iPhone: use the side buttons';
   hint.classList.add('is-shown');
-  hintTimer = setTimeout(() => hint.classList.remove('is-shown'), HINT_MS);
+  setTimeout(() => hint.classList.remove('is-shown'), HINT_MS);
 }
 
 function volumeKnob(name, label) {
@@ -238,7 +253,8 @@ function volumeKnob(name, label) {
     onChange(v) {
       state = { ...state, [name]: v };
       audio.setVolume(name, v);
-      saveState(storage, state);
+      if (ready) saveState(storage, state);
+      else volumesTouched = true; // сохраним после загрузки, не затирая сохранённую станцию
     },
   });
 }
@@ -275,7 +291,9 @@ sleepKnob = createKnob($('knob-sleep'), {
 });
 
 // ---- запуск ----
-// Громкости от списка станций не зависят: ручки появляются сразу.
+// Громкости от списка станций не зависят: ручки появляются сразу. Станция здесь ещё умолчательная,
+// поэтому до конца start() состояние не сохраняется.
+let volumesTouched = false;
 state = loadState(storage, '', []);
 volumeKnob('lofi', 'LO-FI');
 volumeKnob('atc', 'ATC');
@@ -289,8 +307,12 @@ async function start() {
     rows.city.set('NO STATIONS');
     return;
   }
-  state = loadState(storage, location.search, stations.map((s) => s.code));
+  const loaded = loadState(storage, location.search, stations.map((s) => s.code));
+  state = volumesTouched ? { ...loaded, lofi: state.lofi, atc: state.atc } : loaded;
   shownCode = state.station;
+  ready = true;
+  keyPlay.disabled = false;
+  if (volumesTouched) saveState(storage, state);
 
   const st = findStation(stations, state.station);
   audio.setStation(st);

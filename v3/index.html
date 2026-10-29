@@ -21,48 +21,49 @@
 </head>
 <body>
   <main class="device" aria-label="ATC Live Radio">
-    <header class="brand">
-      <h1 class="title">ATC LIVE RADIO <span>WITH LO-FI</span></h1>
-      <span class="lamp" id="lamp" data-state="off" aria-hidden="true"></span>
-    </header>
-
     <div class="reel-cell">
+      <header class="brand">
+        <h1 class="title">ATC LIVE RADIO <span>WITH LO-FI</span></h1>
+        <span class="lamp" id="lamp" data-state="off" aria-hidden="true"></span>
+      </header>
       <div class="window">
         <canvas id="reel" role="img" aria-label="Radar around the selected airport"></canvas>
       </div>
     </div>
 
-    <button class="board" id="board" type="button" aria-label="Next station">
-      <span class="board-row row-code" id="f-code"></span>
-      <span class="board-row row-city" id="f-city"></span>
-      <span class="board-row row-info">
-        <span class="board-group" id="f-time"></span>
-        <span class="board-group" id="f-freq"></span>
-        <span class="board-group" id="f-pos"></span>
-      </span>
-    </button>
+    <div class="deck">
+      <button class="board" id="board" type="button" aria-label="Next station">
+        <span class="board-row row-code" id="f-code"></span>
+        <span class="board-row row-city" id="f-city"></span>
+        <span class="board-row row-info">
+          <span class="board-group" id="f-time"></span>
+          <span class="board-group" id="f-freq"></span>
+          <span class="board-group" id="f-pos"></span>
+        </span>
+      </button>
 
-    <div class="controls">
-      <div class="transport">
-        <div class="keys" role="group" aria-label="Transport">
-          <button class="key" id="key-prev" type="button" aria-label="Previous station">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h3v16H5zM19 4 9 12l10 8z"/></svg>
-          </button>
-          <button class="key" id="key-play" type="button" aria-label="Play" aria-pressed="false">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4l14 8-14 8z"/></svg>
-          </button>
-          <button class="key" id="key-next" type="button" aria-label="Next station">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4l10 8-10 8zM16 4h3v16h-3z"/></svg>
-          </button>
+      <div class="controls">
+        <div class="transport">
+          <div class="keys" role="group" aria-label="Transport">
+            <button class="key" id="key-prev" type="button" aria-label="Previous station">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h3v16H5zM19 4 9 12l10 8z"/></svg>
+            </button>
+            <button class="key" id="key-play" type="button" aria-label="Play" aria-pressed="false" disabled>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4l14 8-14 8z"/></svg>
+            </button>
+            <button class="key" id="key-next" type="button" aria-label="Next station">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4l10 8-10 8zM16 4h3v16h-3z"/></svg>
+            </button>
+          </div>
+          <div class="key-labels" aria-hidden="true"><span>PREV</span><span>PLAY</span><span>NEXT</span></div>
         </div>
-        <div class="key-labels" aria-hidden="true"><span>PREV</span><span>PLAY</span><span>NEXT</span></div>
-      </div>
 
-      <div class="dials">
-        <div class="dial dial-sleep"><span class="dial-label" aria-hidden="true">SLEEP</span><div class="dial-knob" id="knob-sleep"></div></div>
-        <div class="dial"><span class="dial-label" aria-hidden="true">LO-FI</span><div class="dial-knob" id="knob-lofi"></div></div>
-        <div class="dial"><span class="dial-label" aria-hidden="true">ATC</span><div class="dial-knob" id="knob-atc"></div></div>
-        <p class="hint" id="hint" role="status"></p>
+        <div class="dials">
+          <div class="dial dial-sleep"><span class="dial-label" aria-hidden="true">SLEEP</span><div class="dial-knob" id="knob-sleep"></div></div>
+          <div class="dial"><span class="dial-label" aria-hidden="true">LO-FI</span><div class="dial-knob" id="knob-lofi"></div></div>
+          <div class="dial"><span class="dial-label" aria-hidden="true">ATC</span><div class="dial-knob" id="knob-atc"></div></div>
+          <p class="hint" id="hint" role="status"></p>
+        </div>
       </div>
     </div>
 
