@@ -11,17 +11,17 @@ const isAbort = (err) => Boolean(err) && err.name === 'AbortError';
  * to document.body) when called; the ATC one gets referrerpolicy="no-referrer"
  * and the lofi one crossOrigin="anonymous" before any src is assigned.
  */
-export function createAudio({ ios, onState = () => {} }) {
-  const lofiEl = document.createElement('audio');
+export function createAudio({ ios, onState = () => {}, createElement = (tag) => document.createElement(tag) }) {
+  const lofiEl = createElement('audio');
   lofiEl.crossOrigin = 'anonymous';
-  const atcEl = document.createElement('audio');
+  const atcEl = createElement('audio');
   atcEl.setAttribute('referrerpolicy', 'no-referrer');
   atcEl.referrerPolicy = 'no-referrer';
   for (const el of [lofiEl, atcEl]) {
     el.preload = 'none';
     el.setAttribute('playsinline', '');
     el.hidden = true;
-    document.body.appendChild(el);
+    if (typeof document !== 'undefined' && document.body) document.body.appendChild(el);
   }
 
   let playing = false;
@@ -85,14 +85,15 @@ export function createAudio({ ios, onState = () => {} }) {
 
   function scheduleRetry(name) {
     const s = streams[name];
-    if (!playing || s.timer) return;
+    if (!playing || s.timer || !s.url()) return;
     s.failures += 1;
     const delay = retryDelay(s.attempt++);
     emit();
     s.timer = setTimeout(() => {
       s.timer = null;
-      if (!playing) return;
-      s.el.src = s.url() || s.el.src;
+      const url = s.url();
+      if (!playing || !url) return;
+      s.el.src = url;
       s.lastProgressAt = Date.now();
       const p = s.el.play();
       if (p && p.catch) p.catch((err) => { if (!isAbort(err)) scheduleRetry(name); });
@@ -114,17 +115,26 @@ export function createAudio({ ios, onState = () => {} }) {
     s.el.addEventListener('waiting', () => { if (playing) { s.buffering = true; emit(); } });
     s.el.addEventListener('canplay', () => { if (s.buffering) { s.buffering = false; emit(); } });
     s.el.addEventListener('error', () => scheduleRetry(name));
-    s.el.addEventListener('stalled', () => scheduleRetry(name));
+    // 'stalled' is deliberately ignored: a live mount can be slow to send first bytes;
+    // hard retries come from 'error' and the stallCheck watchdog (12 s from the play request).
     // External pause (Bluetooth/CarPlay/call): playing is still true, so resume.
     s.el.addEventListener('pause', () => {
       if (!playing) return;
       setTimeout(() => {
         if (!playing || !s.el.paused) return;
-        s.el.play().catch((err) => {
-          if (isAbort(err)) return;
-          s.el.src = s.url() || s.el.src;
-          s.el.play().catch(() => {});
-        });
+        const replay = () => {
+          if (!playing || !s.el.paused) return;
+          s.el.play().catch((err) => {
+            if (isAbort(err)) return;
+            const url = s.url();
+            if (!url) return;
+            s.el.src = url;
+            s.el.play().catch(() => {});
+          });
+        };
+        // v2 lesson: a suspended AudioContext must be resumed before replaying.
+        if (ctx && ctx.state === 'suspended') ctx.resume().then(replay, replay);
+        else replay();
       }, EXTERNAL_RESUME_MS);
     });
   }
