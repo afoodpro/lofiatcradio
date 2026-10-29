@@ -1,7 +1,7 @@
 // Service worker ATC Live Radio v3. Лежит в корне сайта, scope — /lofiatcradio/ (тот же, что был у v2):
 // браузер находит его как обновление воркера v2 и при первом открытии переводит устройство на v3.
 // CACHE нужно поднимать при каждом изменении списка SHELL.
-const CACHE = 'lofiatc-v3-14';
+const CACHE = 'lofiatc-v3-15';
 
 const SHELL = [
   './',
@@ -58,15 +58,17 @@ self.addEventListener('install', (event) => {
 });
 
 // Origin общий с другими сайтами Pages: трогаем только свои кеши (lofiatc-v13 от v2, старые lofiatc-v3-*).
-// Если старый кеш нашёлся, это первая активация после v2 или прошлой версии v3: открытые вкладки
-// и приложение с домашнего экрана один раз перезагружаются в текущую версию. Повторная загрузка
-// новой активации не вызывает, поэтому зацикливания нет; на чистом устройстве перезагрузки нет.
+// Перезагружаем открытые вкладки только при переходе со старой v2 (её кеш — не lofiatc-v3-*): там на
+// странице висит старый код. Обычное обновление v3 → v3 ставится тихо — браузер проверяет воркер уже
+// после открытия, и принудительная перезагрузка рвала только что открытую страницу и звук; новая
+// версия подхватится при следующем открытии (HTML и модули — network-first).
 async function activate() {
   const keys = await caches.keys();
   const stale = keys.filter((k) => k.startsWith('lofiatc-') && k !== CACHE);
   await Promise.all(stale.map((k) => caches.delete(k)));
   await self.clients.claim();
-  if (stale.length === 0) return;
+  const fromV2 = stale.some((k) => !k.startsWith('lofiatc-v3-'));
+  if (!fromV2) return;
   const scope = self.registration.scope;
   const windows = await self.clients.matchAll({ type: 'window' });
   // navigate() не ждём: перезагрузка идёт через fetch этого же воркера, а fetch-события браузер
