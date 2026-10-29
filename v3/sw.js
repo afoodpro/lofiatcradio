@@ -1,7 +1,7 @@
 // Service worker ATC Live Radio v3. Лежит в v3/, поэтому его scope — эта папка
 // (на пробном этапе /lofiatcradio/v3/); сервис-воркер v2 в родительской папке не затрагивается.
 // CACHE нужно поднимать при каждом изменении списка SHELL.
-const CACHE = 'lofiatc-v3-1';
+const CACHE = 'lofiatc-v3-2';
 
 const SHELL = [
   './',
@@ -17,7 +17,6 @@ const SHELL = [
   'js/board.js',
   'js/flap.js',
   'js/knob-math.js',
-  'js/knob-sounds.js',
   'js/knob.js',
   'js/radar-data.js',
   'js/reel-math.js',
@@ -25,13 +24,19 @@ const SHELL = [
   'js/state.js',
   'js/stations.js',
   'js/switcher.js',
-  'sounds/knob-click-1.mp3',
-  'sounds/knob-click-2.mp3',
-  'sounds/knob-click-3.mp3',
-  'sounds/knob-press.mp3',
+  'js/ui-sounds.js',
+  'sounds/knob-tick.mp3',
+  'sounds/flap-1.mp3',
+  'sounds/flap-2.mp3',
+  'sounds/flap-3.mp3',
+  'sounds/flap-4.mp3',
+  'sounds/flap-5.mp3',
+  'sounds/key-down.mp3',
+  'sounds/key-up.mp3',
   'stations.json',
   'icons/icon-192.png',
   'icons/icon-512.png',
+  'icons/icon-maskable-512.png',
   'icons/apple-touch-icon.png',
 ];
 

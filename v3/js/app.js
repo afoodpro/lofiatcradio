@@ -5,7 +5,7 @@ import { createFlapRow } from './flap.js';
 import { createReel } from './reel.js';
 import { createKnob } from './knob.js';
 import { sleepIndexToMinutes, sleepDeadline } from './knob-math.js';
-import { createKnobSounds } from './knob-sounds.js';
+import { createUiSounds } from './ui-sounds.js';
 import { createAudio } from './audio.js';
 import { IOS_LEVELS, isIOS, lampState } from './audio-logic.js';
 import { createRadarFeed, labelFor } from './radar-data.js';
@@ -35,13 +35,17 @@ let atc = 'live';
 let shownTime = '';
 let sleepTimer = null;
 
+// ---- звуки интерфейса (от громкости потоков и mute не зависят) ----
+const sounds = createUiSounds();
+const onFlip = () => sounds.flap();
+
 // ---- табло ----
 const rows = {
-  code: createFlapRow($('f-code'), 4, 'lg'),
-  city: createFlapRow($('f-city'), 14, 'md'),
-  time: createFlapRow($('f-time'), 5, 'md'),
-  freq: createFlapRow($('f-freq'), 5, 'md'),
-  pos: createFlapRow($('f-pos'), 3, 'md'),
+  code: createFlapRow($('f-code'), 4, 'lg', { onFlip }),
+  city: createFlapRow($('f-city'), 14, 'md', { onFlip }),
+  time: createFlapRow($('f-time'), 5, 'md', { onFlip }),
+  freq: createFlapRow($('f-freq'), 5, 'md', { onFlip }),
+  pos: createFlapRow($('f-pos'), 3, 'md', { onFlip }),
 };
 
 const shownStation = () => findStation(stations, shownCode);
@@ -90,6 +94,9 @@ const audio = createAudio({
     playing = s.playing;
     atc = s.atc;
     lamp.dataset.state = lampState(s);
+    if (keyPlay.getAttribute('aria-pressed') !== String(playing)) {
+      if (playing) sounds.keyDown(); else sounds.keyUp();
+    }
     keyPlay.setAttribute('aria-pressed', String(playing));
     reel.setPlaying(playing);
     if (mediaSession) mediaSession.playbackState = playing ? 'playing' : 'paused';
@@ -165,6 +172,19 @@ function flash(key) {
   setTimeout(() => key.classList.remove('is-down'), KEY_FLASH_MS);
 }
 
+// Звук клавиш деки: нажатие и отжатие. С мышью/пальцем — по pointerdown/up; с клавиатуры
+// (стрелки, Tab+Enter) и из Media Session — down и через KEY_TAP_MS up.
+const KEY_TAP_MS = 120;
+function tapSound() {
+  sounds.keyDown();
+  setTimeout(() => sounds.keyUp(), KEY_TAP_MS);
+}
+for (const key of [keyPrev, keyNext]) {
+  key.addEventListener('pointerdown', () => sounds.keyDown());
+  key.addEventListener('pointerup', () => sounds.keyUp());
+  key.addEventListener('click', (e) => { if (e.detail === 0) tapSound(); }); // Enter/Space на сфокусированной
+}
+
 keyPlay.addEventListener('click', togglePlay);
 keyPrev.addEventListener('click', () => step(-1));
 keyNext.addEventListener('click', () => step(1));
@@ -192,9 +212,9 @@ document.addEventListener('keydown', (e) => {
     e.preventDefault();
     if (!e.repeat) togglePlay();
   } else if (e.key === 'ArrowRight') {
-    e.preventDefault(); flash(keyNext); step(1);
+    e.preventDefault(); flash(keyNext); tapSound(); step(1);
   } else if (e.key === 'ArrowLeft') {
-    e.preventDefault(); flash(keyPrev); step(-1);
+    e.preventDefault(); flash(keyPrev); tapSound(); step(-1);
   } else if (/^[1-9]$/.test(e.key) && Number(e.key) <= stations.length) {
     e.preventDefault(); jumpTo(Number(e.key) - 1);
   }
@@ -206,8 +226,8 @@ if (mediaSession) {
     play: () => play(),
     pause: () => pause(),
     stop: () => pause(),
-    previoustrack: () => step(-1),
-    nexttrack: () => step(1),
+    previoustrack: () => { tapSound(); step(-1); },
+    nexttrack: () => { tapSound(); step(1); },
   };
   for (const [action, fn] of Object.entries(handlers)) {
     try { mediaSession.setActionHandler(action, fn); } catch { /* действие не поддерживается */ }
@@ -215,7 +235,6 @@ if (mediaSession) {
 }
 
 // ---- ручки ----
-const sounds = createKnobSounds();
 const hint = $('hint');
 let hintShown = false;
 
@@ -237,7 +256,7 @@ function volumeKnob(name, label) {
       value: IOS_LEVELS[name],
       disabled: true,
       onPress() {
-        sounds.press();
+        sounds.knob();
         const muted = audio.toggleMute(name);
         knob.setDisabled(true, muted);
         showIosHint();
@@ -249,7 +268,7 @@ function volumeKnob(name, label) {
     label: `${label} volume`,
     steps: 20,
     value: state[name],
-    onStep: () => sounds.tick(),
+    onStep: () => sounds.knob(),
     onChange(v) {
       state = { ...state, [name]: v };
       audio.setVolume(name, v);
@@ -285,7 +304,7 @@ sleepKnob = createKnob($('knob-sleep'), {
   scaleLabels: ['OFF', '30', '60', '90'],
   valueText: (i) => SLEEP_TEXT[i],
   onStep(i) {
-    sounds.tick();
+    sounds.knob();
     setSleep(sleepIndexToMinutes(i));
   },
 });

@@ -17,7 +17,8 @@ function setFace(cell, c) {
 }
 
 // Один шаг флажка cur -> next: верхняя половинка падает, нижняя поднимается.
-function flipOnce(cell, next) {
+function flipOnce(cell, next, onFlip) {
+  onFlip?.();
   const { el, cur } = cell;
   const u = el.querySelector('.u b'), d = el.querySelector('.d b');
   const fu = el.querySelector('.fu'), fd = el.querySelector('.fd');
@@ -40,7 +41,7 @@ function reducedMotion() {
   return typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
-export function createFlapRow(container, length, size) {
+export function createFlapRow(container, length, size, { onFlip } = {}) {
   container.innerHTML = Array.from({ length }, () => cellHTML(size)).join('');
   const cells = [...container.querySelectorAll('.cell')].map((el) => ({
     el, cur: ' ', target: ' ', timer: null, running: false,
@@ -49,7 +50,7 @@ export function createFlapRow(container, length, size) {
   function run(cell) {
     const [next] = flipPath(cell.cur, cell.target);
     if (next === undefined) { cell.running = false; return; }
-    flipOnce(cell, next).then(() => run(cell), () => { cell.running = false; });
+    flipOnce(cell, next, onFlip).then(() => run(cell), () => { cell.running = false; });
   }
 
   function retarget(cell, target, delay) {
