@@ -13,6 +13,8 @@ function fakeEl() {
   el.setAttribute = (k, v) => { el.attrs[k] = v; };
   el.removeAttribute = (k) => { if (k === 'src') src = ''; delete el.attrs[k]; };
   el.play = () => { el.playCalls++; el.paused = false; return Promise.resolve(); };
+  el.loadCalls = 0;
+  el.load = () => { el.loadCalls++; };
   el.pause = () => { if (el.paused) return; el.paused = true; el.dispatchEvent(new Event('pause')); };
   return el;
 }
@@ -163,4 +165,59 @@ test('iOS: fadeOutAndPause паузит сразу, setVolume — no-op, mute в
   assert.equal(api.toggleMute('atc'), false);
   api.fadeOutAndPause(5000);
   assert.equal(atc.paused, true);
+});
+
+test('внешняя пауза: resume отклонён (и перезагрузка тоже) => hardPause и onState', async (t) => {
+  const { api, atc, last } = setup(t);
+  api.setStation(KJFK); api.play();
+  atc.pause(); // external
+  atc.play = () => { atc.playCalls++; return Promise.reject(new DOMException('no', 'NotAllowedError')); };
+  t.mock.timers.tick(800); await flush();
+  assert.equal(last().playing, false);
+});
+
+test('внешняя пауза: AbortError при resume не роняет движок', async (t) => {
+  const { api, atc, last } = setup(t);
+  api.setStation(KJFK); api.play();
+  atc.pause();
+  atc.play = () => Promise.reject(new DOMException('aborted', 'AbortError'));
+  t.mock.timers.tick(800); await flush();
+  assert.equal(last().playing, true);
+});
+
+test('autoResume: false — внешняя пауза сразу становится паузой движка', (t) => {
+  const { api, atc, last } = setup(t, { autoResume: false });
+  api.setStation(KJFK); api.play();
+  const calls = atc.playCalls;
+  atc.pause();
+  assert.equal(last().playing, false);
+  t.mock.timers.tick(5000);
+  assert.equal(atc.playCalls, calls);
+});
+
+test('NotAllowedError на эфире: hardPause, сбои не растут', async (t) => {
+  const { api, atc, last } = setup(t);
+  api.setStation(KJFK);
+  atc.play = () => { atc.playCalls++; return Promise.reject(new DOMException('gesture', 'NotAllowedError')); };
+  api.play(); await flush();
+  assert.equal(last().playing, false);
+  assert.equal(last().atc, 'live');
+});
+
+test('hardPause сбрасывает src обоих потоков и вызывает load()', (t) => {
+  const { api, atc, lofi } = setup(t);
+  api.setStation(KJFK); api.play();
+  api.pause();
+  assert.equal(atc.src, ''); assert.equal(lofi.src, '');
+  assert.equal(atc.loadCalls, 1); assert.equal(lofi.loadCalls, 1);
+  api.play();
+  assert.match(atc.src, /kjfk_twr\?nocache=/);
+  assert.ok(lofi.src);
+});
+
+test('crossOrigin на лофи только вне iOS', (t) => {
+  t.mock.timers.enable({ apis: ['setInterval'] }); // сторож движка не должен держать процесс
+  const make = (ios) => { const els = []; createAudio({ ios, createElement: () => { const e = fakeEl(); els.push(e); return e; } }); return els[0]; };
+  assert.equal(make(false).crossOrigin, 'anonymous');
+  assert.equal(make(true).crossOrigin, undefined);
 });

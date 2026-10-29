@@ -11,9 +11,9 @@ const isAbort = (err) => Boolean(err) && err.name === 'AbortError';
  * to document.body) when called; the ATC one gets referrerpolicy="no-referrer"
  * and the lofi one crossOrigin="anonymous" before any src is assigned.
  */
-export function createAudio({ ios, onState = () => {}, createElement = (tag) => document.createElement(tag) }) {
+export function createAudio({ ios, autoResume = true, onState = () => {}, createElement = (tag) => document.createElement(tag) }) {
   const lofiEl = createElement('audio');
-  lofiEl.crossOrigin = 'anonymous';
+  if (!ios) lofiEl.crossOrigin = 'anonymous'; // нужен только для Web Audio, на iOS графа нет
   const atcEl = createElement('audio');
   atcEl.setAttribute('referrerpolicy', 'no-referrer');
   atcEl.referrerPolicy = 'no-referrer';
@@ -73,7 +73,8 @@ export function createAudio({ ios, onState = () => {}, createElement = (tag) => 
     const p = s.el.play();
     if (p && p.catch) p.catch((err) => {
       if (isAbort(err)) return;
-      if (err.name === 'NotAllowedError' && name === 'lofi') { hardPause(); return; }
+      // NotAllowedError — проблема жеста, а не потока: не считаем сбоем, просто пауза.
+      if (err.name === 'NotAllowedError') { hardPause(); return; }
       scheduleRetry(name);
     });
   }
@@ -96,7 +97,11 @@ export function createAudio({ ios, onState = () => {}, createElement = (tag) => 
       s.el.src = url;
       s.lastProgressAt = Date.now();
       const p = s.el.play();
-      if (p && p.catch) p.catch((err) => { if (!isAbort(err)) scheduleRetry(name); });
+      if (p && p.catch) p.catch((err) => {
+        if (isAbort(err)) return;
+        if (err.name === 'NotAllowedError') { hardPause(); return; }
+        scheduleRetry(name);
+      });
     }, delay);
   }
 
@@ -120,6 +125,7 @@ export function createAudio({ ios, onState = () => {}, createElement = (tag) => 
     // External pause (Bluetooth/CarPlay/call): playing is still true, so resume.
     s.el.addEventListener('pause', () => {
       if (!playing) return;
+      if (!autoResume) { hardPause(); return; } // UI и экран блокировки честно показывают паузу
       setTimeout(() => {
         if (!playing || !s.el.paused) return;
         const replay = () => {
@@ -129,7 +135,8 @@ export function createAudio({ ios, onState = () => {}, createElement = (tag) => 
             const url = s.url();
             if (!url) return;
             s.el.src = url;
-            s.el.play().catch(() => {});
+            // Не вышло и с перезагрузкой: движок не должен висеть в «playing» с немыми элементами.
+            s.el.play().catch((err2) => { if (!isAbort(err2)) hardPause(); });
           });
         };
         // v2 lesson: a suspended AudioContext must be resumed before replaying.
@@ -160,6 +167,8 @@ export function createAudio({ ios, onState = () => {}, createElement = (tag) => 
     lofiEl.pause();
     atcEl.pause();
     for (const name of ['lofi', 'atc']) { clearRetry(name); streams[name].buffering = false; streams[name].attempt = 0; }
+    // Обрываем и сетевые соединения (play() заново выставит src).
+    for (const el of [lofiEl, atcEl]) { el.removeAttribute('src'); el.load?.(); }
     emit();
   }
 
