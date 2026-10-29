@@ -54,10 +54,11 @@
   --font: 'Teko', 'Arial Narrow', sans-serif;
   --font-ru: 'Oswald', 'Arial Narrow', sans-serif;
 
-  /* размер прибора: телефон — весь экран */
+  /* размер прибора: телефон — весь экран; в низком широком окне (телефон с панелями браузера,
+     узкое окно компьютера) ширина ограничена высотой, чтобы низ прибора не обрезался */
   --dh: 100vh;
   --dh: 100dvh;
-  --dw: 100vw;
+  --dw: min(100vw, calc(var(--dh) * 0.62));
   --u: calc(var(--dw) / 100);
 }
 
@@ -146,7 +147,7 @@ body {
 .reel-cell::before {
   content: '';
   position: absolute;
-  top: 50%;
+  top: calc(50% + var(--reel-drop) / 2);
   left: calc(var(--u) * -5);
   right: calc(var(--u) * -5);
   height: 2px;
@@ -210,16 +211,20 @@ body {
   container-type: size;
   display: grid;
   place-items: center;
+  /* окно опущено под надпись: сверху поле --reel-drop, шов (::before) идёт через центр окна */
+  --reel-drop: calc(var(--u) * 5);
+  padding-top: var(--reel-drop);
 }
 
 /* Окно — квадрат по меньшей стороне ячейки; размер canvas задаёт CSS, а не его bitmap. */
 .window {
   position: relative;
   /* без container queries (iOS < 16) — фиксированный размер, иначе окно схлопнется в 0 */
-  width: calc(var(--u) * 80);
-  height: calc(var(--u) * 80);
-  width: min(100cqw, 100cqh, calc(var(--u) * 86));
-  height: min(100cqw, 100cqh, calc(var(--u) * 86));
+  width: calc(var(--u) * 72);
+  height: calc(var(--u) * 72);
+  /* с запасом от краёв ячейки: хромированный ободок не подходит к надписи, INFO и краям корпуса */
+  width: min(90cqw, 90cqh, calc(var(--u) * 76));
+  height: min(90cqw, 90cqh, calc(var(--u) * 76));
   border-radius: 50%;
   background: var(--seat);
 }
