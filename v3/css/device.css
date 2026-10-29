@@ -742,18 +742,17 @@ body {
 
 .plate a:hover { color: #000; }
 
-/* ---------- без анимаций ---------- */
-@media (prefers-reduced-motion: reduce) {
-  .key, .hint, .dial-knob svg, .knob-head, .knob-skirt, .knob-index, .pb-key { transition: none; }
-  /* вместо разворота — смена лица и оборота плавным переходом */
-  .unit, .unit.is-flipped, .unit.is-turning:not(.is-flipped) { transition: none; transform: none; }
-  .unit > .device, .device-back { transition: opacity 0.25s ease-out; }
-  .device-back { transform: none; opacity: 0; }
-  .unit.is-flipped > .device { opacity: 0; }
-  .unit.is-flipped > .device-back { opacity: 1; }
-  .lamp[data-state='blink'] {
-    animation: none;
-    background: var(--lamp-on);
-    opacity: 0.55;
-  }
+/* ---------- без анимаций (html.reduce-motion ставит app.js, см. motion.js) ---------- */
+html.reduce-motion .key, html.reduce-motion .hint, html.reduce-motion .dial-knob svg, html.reduce-motion .knob-head,
+html.reduce-motion .knob-skirt, html.reduce-motion .knob-index, html.reduce-motion .pb-key { transition: none; }
+/* вместо разворота — смена лица и оборота плавным переходом */
+html.reduce-motion .unit, html.reduce-motion .unit.is-flipped, html.reduce-motion .unit.is-turning:not(.is-flipped) { transition: none; transform: none; }
+html.reduce-motion .unit > .device, html.reduce-motion .device-back { transition: opacity 0.25s ease-out; }
+html.reduce-motion .device-back { transform: none; opacity: 0; }
+html.reduce-motion .unit.is-flipped > .device { opacity: 0; }
+html.reduce-motion .unit.is-flipped > .device-back { opacity: 1; }
+html.reduce-motion .lamp[data-state='blink'] {
+  animation: none;
+  background: var(--lamp-on);
+  opacity: 0.55;
 }

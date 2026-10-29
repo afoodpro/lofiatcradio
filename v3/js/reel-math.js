@@ -42,10 +42,17 @@ export function bearing(x, y) {
 export function layoutLabels(items, { charW, h, pad }) {
   const taken = [];
   return items.map(({ x, y, text }) => {
+    if (!text) return false; // пустая подпись места не занимает
     const w = text.length * charW;
     const box = { l: x - pad, r: x + w + pad, t: y - h / 2 - pad, b: y + h / 2 + pad };
     const clash = taken.some((o) => box.l < o.r && o.l < box.r && box.t < o.b && o.t < box.b);
     if (!clash) taken.push(box);
     return !clash;
   });
+}
+
+// Плавное изменение масштаба: ease-out (кубический) от from к to за durMs.
+export function easeRange(from, to, elapsedMs, durMs = 1000) {
+  const t = Math.min(1, Math.max(0, elapsedMs / durMs));
+  return from + (to - from) * (1 - (1 - t) ** 3);
 }

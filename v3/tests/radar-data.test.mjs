@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { nextRadius, radarStatus, labelFor, toBlips, createRadarFeed, RADAR_BASE } from '../js/radar-data.js';
+import { nextRadius, radarStatus, labelFor, toBlips, chooseDisplayRadius, createRadarFeed, RADAR_BASE } from '../js/radar-data.js';
 
 const flush = () => new Promise((r) => setImmediate(r));
 
@@ -34,7 +34,7 @@ test('статусы и подписи', () => {
 test('toBlips отбрасывает дальние', () => {
   const st = { lat: 55.01, lon: 82.65 };
   const b = toBlips(st, 40, [
-    { lat: 55.2, lon: 82.65, track: 90, call: 'SBI1234XYZ' },
+    { lat: 55.4, lon: 82.65, track: 90, call: 'SBI1234XYZ' },
     { lat: 57, lon: 82.65, track: 0, call: 'FAR' },
   ]);
   assert.equal(b.length, 1);
@@ -205,3 +205,52 @@ test('пауза: опрос раз в 60 с, PLAY подтягивает ожи
 });
 
 test('toBlips: не больше 12, ближайшие, без зоны втулки', () => { const st={lat:40.64,lon:-73.78}; const ac=[]; for(let i=0;i<30;i++) ac.push({lat:40.64+0.02*(i+1),lon:-73.78,track:0,call:'A'+i}); ac.push({lat:40.641,lon:-73.78,track:0,call:'GND'}); const b=toBlips(st,40,ac); assert.equal(b.length,12); assert.ok(b.every(x=>x.call!=='GND')); for(let i=1;i<b.length;i++) assert.ok(Math.hypot(b[i].x,b[i].y)>=Math.hypot(b[i-1].x,b[i-1].y)); });
+
+test('chooseDisplayRadius: 30 бортов на 1..30 NM — 12-й видимый у края, втулка не считается', () => {
+  const d = chooseDisplayRadius(Array.from({ length: 30 }, (_, i) => i + 1), { maxNm: 40 });
+  assert.ok(d > 12 / 0.9 && d < 20, String(d));
+  const visible = Array.from({ length: 30 }, (_, i) => i + 1).filter((x) => x >= 0.28 * d && x <= d);
+  assert.ok(visible.length >= 11 && visible.length <= 13, String(visible.length));
+});
+test('chooseDisplayRadius: меньше k бортов — по самому дальнему, зажато в maxNm', () => {
+  assert.ok(Math.abs(chooseDisplayRadius([5, 20, 35], { maxNm: 40 }) - 35 / 0.9) < 1e-9);
+  assert.equal(chooseDisplayRadius([5, 20, 39], { maxNm: 40 }), 40);
+  assert.ok(Math.abs(chooseDisplayRadius([5, 20, 30], { maxNm: 80 }) - 30 / 0.9) < 1e-9);
+});
+test('chooseDisplayRadius: пусто — maxNm; все близко — minNm', () => {
+  assert.equal(chooseDisplayRadius([], { maxNm: 80 }), 80);
+  assert.equal(chooseDisplayRadius([4, 5, 6], { maxNm: 40 }), 10);
+});
+
+test('feed: борт на 5 NM виден (масштаб 10 NM), displayNm отдаётся', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  globalThis.document = fakeDocument();
+  const fetchFn = async () => okRes([{ hex: 'n', call: 'NEAR1', lat: 55.01 + 5 / 60, lon: 82.65, track: 0 }]);
+  const updates = [];
+  const feed = createRadarFeed({ onUpdate: (u) => updates.push(u), fetchFn });
+  feed.start({ code: 'UNNT', lat: 55.01, lon: 82.65 });
+  await flush();
+  assert.equal(updates.length, 1);
+  assert.equal(updates[0].nm, 40);
+  assert.equal(updates[0].displayNm, 10);
+  assert.equal(updates[0].blips.length, 1);
+  assert.ok(Math.abs(Math.hypot(updates[0].blips[0].x, updates[0].blips[0].y) - 0.5) < 0.01);
+  feed.stop();
+});
+
+test('feed: борты только под втулкой на всех радиусах — рост до 250 и статус none', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  globalThis.document = fakeDocument();
+  const urls = [];
+  // 1 NM < HUB_CLEAR_R × 10 NM = 2.8 NM
+  const fetchFn = async (url) => { urls.push(url); return okRes([{ hex: 'g', call: 'GND1', lat: 55.01 + 1 / 60, lon: 82.65, track: 0 }]); };
+  const updates = [];
+  const feed = createRadarFeed({ onUpdate: (u) => updates.push(u), fetchFn });
+  feed.start({ code: 'UNNT', lat: 55.01, lon: 82.65 });
+  await flush();
+  assert.deepEqual(urls.map((u) => u.split('nm=')[1]), ['40', '80', '150', '250']);
+  const last = updates[updates.length - 1];
+  assert.equal(last.status, 'none');
+  assert.equal(last.blips.length, 0);
+  feed.stop();
+});

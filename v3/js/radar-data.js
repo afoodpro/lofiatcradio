@@ -31,6 +31,24 @@ export function labelFor(status) {
   return null;
 }
 
+// Масштаб экрана, NM: k-й ближайший (или самый дальний) борт ставим на долю edge радиуса.
+// Борты под втулкой (ближе hubClear × D) не считаются: D уточняем двумя-тремя шагами.
+export function chooseDisplayRadius(distancesNm, { maxNm, minNm = 10, k = 12, edge = 0.9, hubClear = HUB_CLEAR_R } = {}) {
+  const sorted = distancesNm.filter((d) => Number.isFinite(d) && d <= maxNm).sort((a, b) => a - b);
+  if (!sorted.length) return maxNm;
+  const clamp = (v) => Math.min(maxNm, Math.max(minNm, v));
+  const edgeOf = (list) => clamp(list[Math.min(k, list.length) - 1] / edge);
+  let d = edgeOf(sorted);
+  for (let i = 0; i < 3; i++) {
+    const visible = sorted.filter((x) => x >= hubClear * d);
+    if (!visible.length) return d;
+    const next = edgeOf(visible);
+    if (next === d) break;
+    d = next;
+  }
+  return d;
+}
+
 // Отметки внутри круга и вне втулки; не больше MAX_BLIPS ближайших к станции.
 export function toBlips(station, nm, aircraft) {
   const out = [];
@@ -95,13 +113,15 @@ export function createRadarFeed({ onUpdate, fetchFn = (...args) => fetch(...args
     if (abortTimer !== null) { clearTimeout(abortTimer); abortTimer = null; }
     ctl = null;
     if (!data) {
-      emit({ nm: asked, status: 'offline', blips: [] });
+      emit({ nm: asked, displayNm: asked, status: 'offline', blips: [] });
       schedule(RETRY_MS);
       return;
     }
-    const blips = toBlips(st, asked, data.aircraft);
-    const count = blips.length; // рост и статус решает число бортов внутри круга
-    emit({ nm: asked, status: radarStatus({ ok: true, nm: asked, count }), blips });
+    const dists = data.aircraft.map((a) => project(st.lat, st.lon, 1, a.lat, a.lon).r);
+    const displayNm = chooseDisplayRadius(dists, { maxNm: asked });
+    const blips = toBlips(st, displayNm, data.aircraft);
+    const count = blips.length; // рост и статус решает число видимых бортов
+    emit({ nm: asked, displayNm, status: radarStatus({ ok: true, nm: asked, count }), blips });
     const grown = nextRadius(asked, count);
     if (grown !== asked) {
       nm = grown;

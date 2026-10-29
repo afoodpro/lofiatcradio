@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { stepReel, blipBrightness, project, bearing, layoutLabels, REEL_DEG_PER_SEC, SPOKES } from '../js/reel-math.js';
+import { stepReel, blipBrightness, project, bearing, layoutLabels, easeRange, REEL_DEG_PER_SEC, SPOKES } from '../js/reel-math.js';
 
 test('константы катушки', () => { assert.equal(REEL_DEG_PER_SEC, 30); assert.equal(SPOKES, 3); });
 test('разгон до 30°/с', () => { let s={angle:0,speed:0}; for (let i=0;i<100;i++) s=stepReel(s,0.1,true); assert.ok(Math.abs(s.speed-30)<0.5); });
@@ -14,3 +14,6 @@ test('за радиусом r > 1', () => assert.ok(project(40,-74,40,41,-74).r>
 test('пеленг: север 0, юг 180, запад 270', () => { assert.equal(bearing(0,-1),0); assert.equal(bearing(0,1),180); assert.equal(bearing(-1,0),270); });
 
 test('layoutLabels прячет наложившиеся подписи дальних', () => { const r=layoutLabels([{x:0,y:0,text:'AAL102'},{x:5,y:2,text:'DAL4'},{x:200,y:0,text:'UAL9'}],{charW:6,h:10,pad:2}); assert.deepEqual(r,[true,false,true]); });
+
+test('layoutLabels: пустая подпись не занимает места', () => { const r=layoutLabels([{x:0,y:0,text:''},{x:0,y:0,text:'AAL1'}],{charW:6,h:10,pad:2}); assert.deepEqual(r,[false,true]); });
+test('easeRange: концы и ease-out', () => { assert.equal(easeRange(10,50,0),10); assert.equal(easeRange(10,50,1000),50); assert.equal(easeRange(10,50,5000),50); assert.ok(easeRange(10,50,500)>30); });

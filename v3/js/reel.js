@@ -1,7 +1,8 @@
 // Катушка-радар на Canvas 2D. Радар неподвижен (север вверху), поверх вращаются обод и три спицы с втулкой.
 // Спицы работают как развёртка: отметка вспыхивает под спицей и гаснет до следующей (blipBrightness).
 // Рисуем в круг min(width, height) по центру canvas; размер берётся из CSS-бокса (ResizeObserver).
-import { stepReel, blipBrightness, bearing, layoutLabels, SPOKES } from './reel-math.js';
+import { stepReel, blipBrightness, bearing, layoutLabels, easeRange, SPOKES } from './reel-math.js';
+import { reducedMotion } from './motion.js';
 
 const RIM_TEXT = 'ATC LIVE RADIO · WITH LO-FI · 7½ IPS';
 const RIM_FONT = 'Teko, sans-serif';
@@ -9,6 +10,7 @@ const MONO = 'ui-monospace, Menlo, Consolas, monospace';
 const REDUCED_BRIGHTNESS = 0.8;
 // Угол катушки в покое: спицы не закрывают N, шкалу и подпись внизу, надпись обода стоит сверху.
 const REST_ANGLE = 30;
+const RANGE_ANIM_MS = 1000;
 
 const C = {
   seat: '#8d918c',
@@ -37,10 +39,6 @@ const G = {
   spokeRoot: 0.12, spokeTip: 0.93, spokeW0: 0.1, spokeW1: 0.13,
 };
 
-function reducedMotionQuery() {
-  return typeof matchMedia === 'function' ? matchMedia('(prefers-reduced-motion: reduce)') : null;
-}
-
 // Силуэт самолёта носом вверх, единичный размах.
 function planePath(ctx, s) {
   const p = [[0, -1], [0.11, -0.78], [0.11, -0.22], [1, 0.2], [1, 0.36], [0.11, 0.18], [0.09, 0.62], [0.4, 0.84], [0.4, 0.96], [0, 0.88]];
@@ -53,13 +51,15 @@ function planePath(ctx, s) {
 
 export function createReel(canvas) {
   const ctx = canvas.getContext('2d');
-  const mq = reducedMotionQuery();
-  let reduced = !!mq?.matches;
+  const mq = typeof matchMedia === 'function' ? matchMedia('(prefers-reduced-motion: reduce)') : null;
+  let reduced = reducedMotion();
   let state = { angle: REST_ANGLE, speed: 0 };
   let playing = false;
-  let aircraft = [];
   let label = null;
-  let rangeNm = null;
+  let rangeNm = null; // целевой масштаб, NM
+  let shownNm = null; // масштаб на экране (плывёт к rangeNm)
+  let rangeAnim = null; // {from, to, t0} — t0 ставится в первом кадре
+  let planes = []; // борты в NM от центра: {xNm, yNm, track, call}
   let cssW = 0, cssH = 0, scale = 1;
   let raf = 0, last = 0, destroyed = false;
   let glyphs = null; // {size, list: [{ch, a}]} — раскладка надписи по ободу для текущего размера
@@ -84,18 +84,23 @@ export function createReel(canvas) {
   document.fonts?.load(`500 12px ${RIM_FONT}`).then(onFonts, () => {});
   document.fonts?.addEventListener?.('loadingdone', onFonts);
 
-  const onMotion = () => { reduced = !!mq?.matches; if (reduced) state = { angle: state.angle, speed: 0 }; kick(); };
+  const onMotion = () => { reduced = reducedMotion(); if (reduced) state = { angle: state.angle, speed: 0 }; kick(); };
   mq?.addEventListener?.('change', onMotion);
 
   // ---- цикл ----
   function animating() {
-    return !reduced && (playing || state.speed > 0.02);
+    return rangeAnim !== null || (!reduced && (playing || state.speed > 0.02));
   }
 
   function frame(t) {
     raf = 0;
     const dt = last ? (t - last) / 1000 : 0;
     last = t;
+    if (rangeAnim) {
+      if (rangeAnim.t0 === null) rangeAnim.t0 = t;
+      shownNm = easeRange(rangeAnim.from, rangeAnim.to, t - rangeAnim.t0, RANGE_ANIM_MS);
+      if (t - rangeAnim.t0 >= RANGE_ANIM_MS) { shownNm = rangeAnim.to; rangeAnim = null; }
+    }
     if (!reduced) {
       state = stepReel(state, dt, playing);
       if (!playing && state.speed <= 0.02) state = { angle: state.angle, speed: 0 };
@@ -170,7 +175,7 @@ export function createReel(canvas) {
     if (rangeNm != null) {
       ctx.textAlign = 'right';
       ctx.textBaseline = 'bottom';
-      ctx.fillText(`${Math.round(rangeNm)} NM`, pr - 4, -3);
+      ctx.fillText(`${Math.round(shownNm ?? rangeNm)} NM`, pr - 4, -3);
     }
     if (label) {
       ctx.textAlign = 'center';
@@ -181,8 +186,11 @@ export function createReel(canvas) {
   }
 
   function drawAircraft(R) {
-    if (!aircraft.length) return;
+    if (!planes.length) return;
     const pr = R * G.plot;
+    const nm = shownNm ?? rangeNm ?? 1;
+    // Положение в долях единичного круга при текущем (плавающем) масштабе.
+    const aircraft = planes.map((a) => ({ x: a.xNm / nm, y: a.yNm / nm, track: a.track, call: a.call }));
     const size = Math.min(8, Math.max(5, R * 0.035));
     ctx.save();
     circle(R * G.rimInner);
@@ -369,8 +377,9 @@ export function createReel(canvas) {
       playing = !!b;
       kick();
     },
-    setAircraft(list) {
-      aircraft = Array.isArray(list) ? list.slice() : [];
+    // list — отметки с x, y в долях радиуса при масштабе nm (NM на единичный круг).
+    setAircraft(list, nm) {
+      planes = Array.isArray(list) ? list.map((p) => ({ xNm: p.x * nm, yNm: p.y * nm, track: p.track, call: p.call })) : [];
       kick();
     },
     setLabel(text) {
@@ -379,6 +388,8 @@ export function createReel(canvas) {
     },
     setRangeNm(nm) {
       rangeNm = Number.isFinite(nm) ? nm : null;
+      if (rangeNm === null || shownNm === null || reduced) { shownNm = rangeNm; rangeAnim = null; }
+      else if (shownNm !== rangeNm) rangeAnim = { from: shownNm, to: rangeNm, t0: null };
       kick();
     },
     destroy() {

@@ -1,6 +1,7 @@
 // DOM-компонент табло: ряд перекидных флажков (Web Animations API).
 // Стили ячеек (.cell .u .d .fu .fd, размеры lg/md) — в CSS; здесь только разметка и анимация.
 import { flipPath } from './board.js';
+import { reducedMotion } from './motion.js';
 
 const STEP_MS = 70;
 const STAGGER_MS = 25;
@@ -37,9 +38,6 @@ function flipOnce(cell, next, onFlip) {
   });
 }
 
-function reducedMotion() {
-  return typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
-}
 
 export function createFlapRow(container, length, size, { onFlip } = {}) {
   container.innerHTML = Array.from({ length }, () => cellHTML(size)).join('');

@@ -12,6 +12,7 @@ import { createRadarFeed, labelFor } from './radar-data.js';
 import { DEFAULTS, loadState, saveState } from './state.js';
 import { createSwitcher } from './switcher.js';
 import { createPassport } from './passport.js';
+import { reducedMotion } from './motion.js';
 
 const CLOCK_CHECK_MS = 5000;
 const SLEEP_FADE_MS = 8000;
@@ -76,13 +77,15 @@ setInterval(() => {
   if (t !== shownTime) { shownTime = t; rows.time.set(t); }
 }, CLOCK_CHECK_MS);
 
+if (reducedMotion()) document.documentElement.classList.add('reduce-motion');
+
 // ---- катушка-радар ----
 const reel = createReel($('reel'));
 const radarFeed = createRadarFeed({
   playing: false,
-  onUpdate({ nm, status, blips }) {
-    reel.setAircraft(blips);
-    reel.setRangeNm(nm);
+  onUpdate({ displayNm, status, blips }) {
+    reel.setAircraft(blips, displayNm);
+    reel.setRangeNm(displayNm);
     reel.setLabel(labelFor(status));
   },
 });

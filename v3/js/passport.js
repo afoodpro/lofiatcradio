@@ -3,7 +3,9 @@
 // на кнопку лицевой панели. Ничего не делает при импорте — только при вызове createPassport.
 
 const FLIP_MS = 600; // совпадают с transition в device.css
-const FADE_MS = 250; // prefers-reduced-motion: вместо разворота — смена плавным переходом
+import { reducedMotion } from './motion.js';
+
+const FADE_MS = 250; // при «уменьшении движения» (motion.js): вместо разворота — смена плавным переходом
 const FONT_PRELOAD_DELAY_MS = 3000;
 // Кириллица и латиница: загружаются оба файла unicode-range каждого начертания.
 const FONT_SAMPLE = 'Паспорт Passport';
@@ -20,7 +22,6 @@ export function createPassport({ unit, front, back, button, backButton }) {
   let open = false;
   let doneTimer = null;
 
-  const reducedMotion = () => Boolean(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches);
 
   // Кнопка на обороте стоит на той же высоте, что на лице: на высоком телефоне катушка вместе
   // с кнопкой отцентрована и ниже края корпуса, поэтому высоту меряем (по горизонтали отступ
