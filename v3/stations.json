@@ -1,0 +1,72 @@
+[
+  {
+    "code": "KJFK",
+    "city": "NEW YORK",
+    "mount": "kjfk_twr",
+    "freq": "119.1",
+    "pos": "TWR",
+    "lat": 40.64,
+    "lon": -73.78,
+    "tz": "America/New_York"
+  },
+  {
+    "code": "KSFO",
+    "city": "SAN FRANCISCO",
+    "mount": "ksfo_twr",
+    "freq": "120.5",
+    "pos": "TWR",
+    "lat": 37.62,
+    "lon": -122.38,
+    "tz": "America/Los_Angeles"
+  },
+  {
+    "code": "EHAM",
+    "city": "AMSTERDAM",
+    "mount": "eham_twr_18c36c",
+    "freq": "118.1",
+    "pos": "TWR",
+    "lat": 52.31,
+    "lon": 4.76,
+    "tz": "Europe/Amsterdam"
+  },
+  {
+    "code": "URSS",
+    "city": "SOCHI",
+    "mount": "urss",
+    "freq": "124.6",
+    "pos": "TWR",
+    "lat": 43.45,
+    "lon": 39.95,
+    "tz": "Europe/Moscow"
+  },
+  {
+    "code": "UNNT",
+    "city": "NOVOSIBIRSK",
+    "mount": "unnt",
+    "freq": "SCAN",
+    "pos": "ALL",
+    "lat": 55.01,
+    "lon": 82.65,
+    "tz": "Asia/Novosibirsk"
+  },
+  {
+    "code": "RJTT",
+    "city": "TOKYO",
+    "mount": "rjtt_app",
+    "freq": "119.4",
+    "pos": "APP",
+    "lat": 35.55,
+    "lon": 139.78,
+    "tz": "Asia/Tokyo"
+  },
+  {
+    "code": "YSSY",
+    "city": "SYDNEY",
+    "mount": "yssy1_twr",
+    "freq": "124.7",
+    "pos": "TWR",
+    "lat": -33.95,
+    "lon": 151.18,
+    "tz": "Australia/Sydney"
+  }
+]
