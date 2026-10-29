@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { findStation, stepStation, atcUrl, RELAY } from '../js/stations.js';
+import { loadStations, findStation, stepStation, atcUrl, RELAY } from '../js/stations.js';
 
 const list = JSON.parse(readFileSync(new URL('../stations.json', import.meta.url)));
 
@@ -10,3 +10,9 @@ test('поля табло влезают', () => list.forEach(s => { assert.ok(s
 test('atcUrl', () => assert.equal(atcUrl(findStation(list, 'UNNT'), 1793260000000), `${RELAY}/unnt?nocache=1793260000000`));
 test('stepStation по кругу', () => { assert.equal(stepStation(list, 'YSSY', 1).code, 'KJFK'); assert.equal(stepStation(list, 'KJFK', -1).code, 'YSSY'); });
 test('неизвестный код', () => assert.equal(findStation(list, 'KLAX'), undefined));
+test('loadStations: не-2xx отклоняется', async () => {
+  await assert.rejects(loadStations(async () => ({ ok: false, status: 503, json: async () => [] })), /503/);
+});
+test('loadStations: ok отдаёт список', async () => {
+  assert.deepEqual(await loadStations(async () => ({ ok: true, json: async () => [1] })), [1]);
+});

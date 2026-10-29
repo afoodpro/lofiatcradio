@@ -9,6 +9,7 @@ export const DEFAULT_CODE = 'KJFK';
 export async function loadStations(fetchFn = fetch) {
   const url = new URL('../stations.json', import.meta.url);
   const response = await fetchFn(url);
+  if (!response.ok) throw new Error(`stations.json: HTTP ${response.status}`);
   return response.json();
 }
 
