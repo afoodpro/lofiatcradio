@@ -322,3 +322,10 @@ async function start() {
 }
 
 start();
+
+// Офлайн-оболочка: sw.js лежит рядом с index.html, scope совпадает с папкой приложения.
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  });
+}
