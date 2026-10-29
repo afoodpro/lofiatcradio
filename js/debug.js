@@ -5,20 +5,19 @@
 export function installDebug() {
   const box = document.createElement('pre');
   box.setAttribute('aria-hidden', 'true');
-  box.style.cssText = 'position:fixed;left:0;right:0;bottom:0;max-height:42vh;overflow:auto;margin:0;padding:6px 8px;'
-    + 'background:rgba(0,0,0,.82);color:#9f9;font:10px/1.35 ui-monospace,Menlo,monospace;z-index:99999;white-space:pre-wrap;pointer-events:auto;';
+  box.style.cssText = 'position:fixed;left:0;right:0;top:0;max-height:24vh;overflow:hidden;margin:0;padding:4px 6px;'
+    + 'background:rgba(0,0,0,.78);color:#9f9;font:9px/1.3 ui-monospace,Menlo,monospace;z-index:99999;white-space:pre-wrap;pointer-events:none;';
   document.body.appendChild(box);
   const lines = [];
   const t0 = performance.now();
   const log = (msg) => {
     const t = ((performance.now() - t0) / 1000).toFixed(1).padStart(6);
     lines.push(`${t} ${msg}`);
-    if (lines.length > 60) lines.shift();
+    if (lines.length > 18) lines.shift();
     box.textContent = lines.join('\n');
-    box.scrollTop = box.scrollHeight;
   };
   const name = (el) => {
-    const s = el.currentSrc || el.src || el.getAttribute('src') || '';
+    const s = el.getAttribute('src') || el.src || el.currentSrc || '';
     if (/liveatc/.test(s)) return 'ATC';
     if (/hostingradio|laut/.test(s)) return 'LOFI';
     if (/sounds\//.test(s)) return 'UI';
@@ -27,6 +26,12 @@ export function installDebug() {
 
   // Media Session: перехватываем регистрацию, чтобы видеть каждое нажатие.
   const ms = navigator.mediaSession;
+  if (ms) {
+    // Какое состояние мы сообщаем системе (шторка показывает play/pause по нему).
+    const proto = Object.getPrototypeOf(ms);
+    const desc = Object.getOwnPropertyDescriptor(proto, 'playbackState');
+    if (desc && desc.set) Object.defineProperty(ms, 'playbackState', { configurable: true, get: () => desc.get.call(ms), set: (v) => { log(`MS playbackState=${v}`); desc.set.call(ms, v); } });
+  }
   if (ms && ms.setActionHandler) {
     const orig = ms.setActionHandler.bind(ms);
     ms.setActionHandler = (action, fn) => orig(action, fn ? (d) => { log(`MS action ${action}`); return fn(d); } : null);
@@ -36,7 +41,7 @@ export function installDebug() {
   const play = HTMLMediaElement.prototype.play;
   HTMLMediaElement.prototype.play = function (...a) {
     const n = name(this);
-    log(`${n}.play() src=${(this.currentSrc || this.src || '').slice(-28)} paused=${this.paused} rs=${this.readyState}`);
+    log(`${n}.play() src=${(this.getAttribute('src') || '').slice(-26)} paused=${this.paused} rs=${this.readyState}`);
     const p = play.apply(this, a);
     if (p && p.then) p.then(() => log(`${n}.play() ok`), (e) => log(`${n}.play() REJECT ${e.name}: ${e.message}`));
     return p;
