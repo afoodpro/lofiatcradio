@@ -174,3 +174,32 @@ test('onUpdate бросает исключение: опрос продолжа�
   assert.equal(calls, 2);
   feed.stop();
 });
+
+test('пауза: опрос раз в 60 с, PLAY подтягивает ожидание к 10 с', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  globalThis.document = fakeDocument();
+  let calls = 0;
+  const fetchFn = async () => { calls += 1; return okRes([{ ...plane }]); };
+  const feed = createRadarFeed({ onUpdate() {}, fetchFn, playing: false });
+  feed.start({ code: 'UNNT', lat: 55.01, lon: 82.65 });
+  await flush();
+  assert.equal(calls, 1);
+  t.mock.timers.tick(59000);
+  await flush();
+  assert.equal(calls, 1);
+  t.mock.timers.tick(1000);
+  await flush();
+  assert.equal(calls, 2);
+  feed.setPlaying(true); // ждущий опрос перепланирован на 10 с
+  t.mock.timers.tick(10000);
+  await flush();
+  assert.equal(calls, 3);
+  feed.setPlaying(false);
+  t.mock.timers.tick(10000); // уже запланированный опрос ещё идёт; следующий — через 60 с
+  await flush();
+  assert.equal(calls, 4);
+  t.mock.timers.tick(59000);
+  await flush();
+  assert.equal(calls, 4);
+  feed.stop();
+});

@@ -120,6 +120,22 @@ class HandleTests(unittest.TestCase):
         get(deps)
         self.assertEqual(calls["opensky"], 2)
 
+    def test_opensky_cached_45s_for_far_radius(self):
+        deps, calls, clock = make_deps(adsb=[], opensky=[])
+        get(deps, "station=UNNT&nm=150")
+        clock.t += 40
+        get(deps, "station=UNNT&nm=150")
+        self.assertEqual(calls["opensky"], 1)
+        clock.t += 6
+        get(deps, "station=UNNT&nm=150")
+        self.assertEqual(calls["opensky"], 2)
+
+    def test_rate_limit_header_noted_as_number(self):
+        rp._note_rate_limit("3999")
+        self.assertEqual(rp._RATE["remaining"], 3999)
+        rp._note_rate_limit("garbage; drop table")
+        self.assertEqual(rp._RATE["remaining"], 3999)
+
     def test_adsb_cached_5s(self):
         deps, calls, clock = make_deps(adsb=[], opensky=[])
         get(deps)

@@ -30,7 +30,9 @@ DEADLINE = 7  # общий дедлайн ответа; клиент сдаёт�
 RADII = (40, 80, 150, 250)
 DEFAULT_ORIGINS = "https://afoodpro.github.io,http://localhost:8080"
 ADSB_TTL = 5
-OPENSKY_TTL = 15
+OPENSKY_TTL = 15  # nm <= 80
+OPENSKY_TTL_FAR = 45  # nm >= 150: большие bbox дороже по кредитам OpenSky
+OPENSKY_FAR_NM = 150
 ADSB_FAIL_TTL = 5
 OPENSKY_FAIL_TTL = 20
 TOKEN_MARGIN = 60
@@ -128,11 +130,25 @@ class TTLCache:
 
 # ---------- сеть ----------
 
-def _http_json(url: str, timeout: float, headers: Optional[Dict[str, str]] = None, data: Optional[bytes] = None) -> Any:
+# Последний X-Rate-Limit-Remaining от OpenSky (только число) — для строки лога.
+_RATE = {"remaining": None}  # type: Dict[str, Optional[int]]
+
+
+def _note_rate_limit(value: Optional[str]) -> None:
+    try:
+        _RATE["remaining"] = int(str(value).strip())
+    except (TypeError, ValueError):
+        pass
+
+
+def _http_json(url: str, timeout: float, headers: Optional[Dict[str, str]] = None, data: Optional[bytes] = None,
+               on_headers: Optional[Callable[[Any], None]] = None) -> Any:
     h = {"User-Agent": USER_AGENT, "Accept": "application/json"}
     h.update(headers or {})
     req = urllib.request.Request(url, data=data, headers=h)
     with urllib.request.urlopen(req, timeout=timeout) as resp:
+        if on_headers is not None:
+            on_headers(resp.headers)
         return json.loads(resp.read().decode("utf-8"))
 
 
@@ -156,7 +172,8 @@ def fetch_adsb(lat: float, lon: float, nm: int) -> List[Aircraft]:
 def fetch_opensky(box: Tuple[float, float, float, float], token: str) -> List[Aircraft]:
     q = urllib.parse.urlencode(dict(zip(("lamin", "lomin", "lamax", "lomax"), ("%.4f" % v for v in box))))
     return normalize_opensky(_http_json(OPENSKY_STATES_URL + "?" + q, OPENSKY_ATTEMPT_TIMEOUT,
-                                        headers={"Authorization": "Bearer " + token}))
+                                        headers={"Authorization": "Bearer " + token},
+                                        on_headers=lambda h: _note_rate_limit(h.get("X-Rate-Limit-Remaining"))))
 
 
 class OpenSkyAuth:
@@ -285,8 +302,13 @@ class Deps:
             value, err = None, e
         with self._lock:
             # кеш пополняем до снятия из inflight и до resolve: промаха между ними нет
-            self.caches[name].put(key, (True, value) if err is None else (False, None),
-                                  None if err is None else self.fail_ttl[name])
+            if err is not None:
+                ttl: Optional[float] = self.fail_ttl[name]
+            elif name == "opensky" and key[1] >= OPENSKY_FAR_NM:
+                ttl = OPENSKY_TTL_FAR
+            else:
+                ttl = None
+            self.caches[name].put(key, (True, value) if err is None else (False, None), ttl)
             self._inflight.pop((name, key), None)
         if err is None:
             fut.set_result(value)
@@ -385,6 +407,8 @@ def make_handler(deps: Deps):
                 pass
             ms = int((time.monotonic() - t0) * 1000)
             extra = " adsb=%s opensky=%s" % (info.get("adsb"), info.get("opensky")) if info else ""
+            if info and _RATE["remaining"] is not None:
+                extra += " osky_rl=%d" % _RATE["remaining"]
             sys.stderr.write("GET %s %d %dms%s\n" % (self.path, status, ms, extra))
 
         def log_message(self, fmt: str, *args: Any) -> None:  # стандартный лог не нужен

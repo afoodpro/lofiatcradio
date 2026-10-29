@@ -4,7 +4,8 @@ import { project } from './reel-math.js';
 
 export const RADAR_BASE = 'https://radar.afood.pro';
 export const RADII = [40, 80, 150, 250];
-const POLL_MS = 10000;
+const POLL_MS = 10000; // пока играет
+const PAUSED_POLL_MS = 60000; // на паузе радар почти не нужен — бережём бюджет OpenSky
 const RETRY_MS = 30000;
 const TIMEOUT_MS = 10000;
 const CALL_MAX = 7;
@@ -38,7 +39,8 @@ export function toBlips(station, nm, aircraft) {
   return out;
 }
 
-export function createRadarFeed({ onUpdate, fetchFn = (...args) => fetch(...args) }) {
+export function createRadarFeed({ onUpdate, fetchFn = (...args) => fetch(...args), playing: initialPlaying = true }) {
+  let playing = initialPlaying;
   let station = null;
   let nm = RADII[0];
   let gen = 0; // меняется при start/stop: ответы прошлых запусков игнорируются
@@ -101,7 +103,7 @@ export function createRadarFeed({ onUpdate, fetchFn = (...args) => fetch(...args
       nm = grown;
       if (visible()) poll(); // пустой экран: следующий радиус сразу
     } else {
-      schedule(POLL_MS);
+      schedule(playing ? POLL_MS : PAUSED_POLL_MS);
     }
   }
 
@@ -115,6 +117,13 @@ export function createRadarFeed({ onUpdate, fetchFn = (...args) => fetch(...args
   }
 
   return {
+    // Играет — опрос раз в 10 с, пауза — раз в 60 с. При нажатии PLAY ждущий опрос подтягивается к 10 с.
+    setPlaying(next) {
+      next = Boolean(next);
+      if (next === playing) return;
+      playing = next;
+      if (next && station && timer !== null && !inflight) schedule(POLL_MS);
+    },
     start(next) {
       gen += 1;
       inflight = false;
