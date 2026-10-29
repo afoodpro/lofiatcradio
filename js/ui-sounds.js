@@ -1,6 +1,10 @@
-// Звуки интерфейса: тик ручек, каскад флажков табло, клавиши деки. Обычные <audio> (работает и на iOS,
-// где громкость <audio> менять нельзя — 10% вшито в файлы, поэтому .volume не трогаем).
-// Ничего не создаётся при импорте — только при вызове createUiSounds.
+// Звуки интерфейса: тик ручек, каскад флажков табло, клавиши деки — через Web Audio.
+// Почему не <audio>: на iPhone каждый короткий <audio> перехватывал «Сейчас играет» у потоков
+// (шторка, экран блокировки и CarPlay управляли щелчком), а каждый его play() блокировал страницу.
+// AudioBufferSourceNode не трогает «Сейчас играет» и запускается дёшево. Громкость 10% вшита в файлы.
+// Ничего не создаётся при импорте; контекст и буферы — при первом звуке.
+
+export const UI_SOUND_FILES = ['knob-tick.mp3', 'flap-cascade.mp3', 'flap-minute.mp3', 'key-down.mp3', 'key-up.mp3'];
 
 export function createRateLimiter(minGapMs, now = () => performance.now()) {
   let last = -Infinity;
@@ -12,58 +16,74 @@ export function createRateLimiter(minGapMs, now = () => performance.now()) {
   };
 }
 
-export function pickVariant(n, prev, rand = Math.random) {
-  if (n <= 1) return 0;
-  const v = Math.floor(rand() * (n - 1));
-  return v >= prev ? v + 1 : v;
-}
-
-function play(a) {
-  try {
-    a.currentTime = 0;
-    const p = a.play();
-    if (p && p.catch) p.catch(() => {});
-  } catch (e) { /* автоплей запрещён — молчим */ }
-}
+const defaultContext = () => {
+  const C = globalThis.AudioContext || globalThis.webkitAudioContext;
+  return C ? new C() : null;
+};
 
 export function createUiSounds({
   base = new URL('../sounds/', import.meta.url),
-  createAudio = (src) => new Audio(src),
+  createContext = defaultContext,
+  fetchFn = (url) => fetch(url),
   now = () => performance.now(),
 } = {}) {
-  const make = (file) => {
-    const a = createAudio(new URL(file, base).href);
-    a.preload = 'auto';
-    return a;
-  };
-  // Пул по кругу: перекрывающиеся щелчки не обрывают друг друга.
-  const pool = (files, size) => {
-    const items = Array.from({ length: size }, (_, i) => make(files[i % files.length]));
-    let next = 0;
-    return () => items[next++ % items.length];
-  };
+  let ctx; // undefined — ещё не создавали; null — Web Audio недоступен
+  const buffers = new Map();
 
-  // Аудио создаются лениво при первом звуке: импорт и создание объекта ничего не трогают.
-  const lazy = (build) => {
-    let fn = null;
-    return () => (fn ??= build())();
-  };
+  function decode(ab) {
+    // callback-форма: работает и в старом Safari, где decodeAudioData не возвращает Promise
+    return new Promise((ok, fail) => {
+      try {
+        const p = ctx.decodeAudioData(ab, ok, fail);
+        if (p && p.catch) p.catch(fail);
+      } catch (e) { fail(e); }
+    });
+  }
 
-  const knobPool = lazy(() => pool(['knob-tick.mp3'], 4));
-  // Каскад табло — один заранее сведённый файл на смену станции, а не щелчок на каждый шаг флажка:
-  // в WebKit (iPhone) каждый play() у <audio> блокирует страницу, и 30–40 запусков подряд рвали анимацию.
-  const cascadePool = lazy(() => pool(['flap-cascade.mp3'], 2));
-  const minutePool = lazy(() => pool(['flap-minute.mp3'], 1));
-  const downPool = lazy(() => pool(['key-down.mp3'], 2));
-  const upPool = lazy(() => pool(['key-up.mp3'], 2));
+  function preload() {
+    for (const file of UI_SOUND_FILES) {
+      Promise.resolve()
+        .then(() => fetchFn(new URL(file, base).href))
+        .then((r) => r.arrayBuffer())
+        .then(decode)
+        .then((b) => { buffers.set(file, b); })
+        .catch(() => {});
+    }
+  }
+
+  // Контекст создаётся при первом звуке; звуки вызываются из нажатий, поэтому resume() здесь
+  // попадает в жест (iOS будит контекст только так). Первый звук после загрузки может не
+  // прозвучать — буферы ещё грузятся.
+  function context() {
+    if (ctx === undefined) {
+      try { ctx = createContext(); } catch { ctx = null; }
+      if (ctx) preload();
+    }
+    if (ctx && ctx.state === 'suspended') ctx.resume().catch(() => {});
+    return ctx;
+  }
+
+  function play(file) {
+    const c = context();
+    const b = c && buffers.get(file);
+    if (!b) return;
+    try {
+      const src = c.createBufferSource();
+      src.buffer = b;
+      src.connect(c.destination);
+      src.start(0);
+    } catch { /* контекст закрыт или занят — молчим */ }
+  }
+
   const knobOk = createRateLimiter(28, now);
   const cascadeOk = createRateLimiter(250, now);
 
   return {
-    knob() { if (knobOk()) play(knobPool()); },
-    cascade() { if (cascadeOk()) play(cascadePool()); },
-    minute() { play(minutePool()); },
-    keyDown() { play(downPool()); },
-    keyUp() { play(upPool()); },
+    knob() { if (knobOk()) play('knob-tick.mp3'); },
+    // Каскад табло — один заранее сведённый файл на смену станции, не щелчок на каждый шаг флажка.
+    cascade() { if (cascadeOk()) play('flap-cascade.mp3'); },
+    minute() { play('flap-minute.mp3'); },
+    keyDown() { play('key-down.mp3'); },
+    keyUp() { play('key-up.mp3'); },
   };
 }
