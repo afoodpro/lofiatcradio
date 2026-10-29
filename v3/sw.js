@@ -1,7 +1,7 @@
 // Service worker ATC Live Radio v3. Лежит в v3/, поэтому его scope — эта папка
 // (на пробном этапе /lofiatcradio/v3/); сервис-воркер v2 в родительской папке не затрагивается.
 // CACHE нужно поднимать при каждом изменении списка SHELL.
-const CACHE = 'lofiatc-v3-4';
+const CACHE = 'lofiatc-v3-5';
 
 const SHELL = [
   './',

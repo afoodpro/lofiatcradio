@@ -29,11 +29,17 @@
   --flap-top: #2d2e2d;
   --flap-split: #0c0d0c;
   --char: #ecebe4;
-  /* клавиши */
-  --tray: #bcbfba;
-  --key: #f1f2f0;
-  --key-down: #dfe1de;
-  --key-side: #a5a8a3;
+  /* хром: рамки клавиш и колпачки ручек */
+  --chrome: conic-gradient(from 90deg at 50% 50%, #c9ccc8, #f7f8f6, #a9aca8, #eef0ed, #b4b7b3, #f5f6f4, #c9ccc8);
+  --chrome-cap: conic-gradient(from 20deg, #d9dcd9, #fbfbfa 12%, #b9bdba 28%, #f0f2ef 44%, #a9adaa 60%, #f5f6f4 76%, #c9ccc9 90%, #d9dcd9);
+  /* чёрные клавиши */
+  --key: linear-gradient(#2c2d2c, #141514);
+  --key-side: #050505;
+  --key-glyph: #f1eee4;
+  /* ручки: рифлёная юбка */
+  --flute: #1b1c1b;
+  --flute-hi: #2d2e2d;
+  --knob-rim: #111;
   /* лампочка */
   --lamp-off: #b7a685;
   --lamp-on: #ffab24;
@@ -216,7 +222,33 @@ body {
   height: min(100cqw, 100cqh, calc(var(--u) * 86));
   border-radius: 50%;
   background: var(--seat);
-  box-shadow: 0 0 0 calc(var(--u) * 0.9) var(--seat), 0 0 0 calc(var(--u) * 0.9 + 1px) rgba(20, 24, 20, 0.08);
+}
+
+/* неподвижный хромированный ободок вокруг окна (3 % диаметра), снаружи: окно и canvas не уменьшаются.
+   Оба слоя — под canvas (z-index: -1 внутри контекста окна); ::after закрывает середину цветом
+   посадочного места и даёт тонкую тёмную кромку там, где хром встречается с окном. */
+.window::before,
+.window::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.window::before {
+  inset: -3%;
+  background: var(--chrome);
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.22),
+    0 1px 2px rgba(0, 0, 0, 0.3),
+    0 calc(var(--u) * 0.5) calc(var(--u) * 1.4) rgba(20, 24, 20, 0.16);
+}
+
+.window::after {
+  inset: 0;
+  background: var(--seat);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4);
 }
 
 .window canvas {
@@ -349,14 +381,14 @@ body {
   margin-top: calc(var(--u) * 4);
 }
 
-/* клавиши магнитофона */
+/* клавиши магнитофона: чёрные в хромированной рамке */
 .keys {
   display: flex;
   gap: calc(var(--u) * 0.7);
   padding: calc(var(--u) * 0.8);
   border-radius: calc(var(--u) * 1.4);
-  background: var(--tray);
-  box-shadow: inset 0 calc(var(--u) * 0.4) calc(var(--u) * 0.8) rgba(20, 24, 20, 0.2);
+  background: var(--chrome);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35), inset 0 0 0 1px rgba(0, 0, 0, 0.25);
 }
 
 .key {
@@ -370,11 +402,14 @@ body {
   border: 0;
   border-radius: calc(var(--u) * 0.7);
   background: var(--key);
-  box-shadow: 0 var(--depth) 0 var(--key-side), 0 calc(var(--depth) + 1px) calc(var(--u) * 1.2) rgba(20, 24, 20, 0.22);
-  color: var(--ink);
+  box-shadow:
+    0 var(--depth) 0 var(--key-side),
+    0 calc(var(--depth) + 1px) calc(var(--u) * 1.4) rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  color: var(--key-glyph);
   cursor: pointer;
   touch-action: manipulation;
-  transition: transform 0.08s ease-out, box-shadow 0.08s ease-out, background-color 0.08s;
+  transition: transform 0.08s ease-out, box-shadow 0.08s ease-out;
   -webkit-user-select: none;
   user-select: none;
 }
@@ -390,8 +425,10 @@ body {
 .key.is-down,
 .key[aria-pressed='true'] {
   transform: translateY(calc(var(--depth) - 1px));
-  background: var(--key-down);
-  box-shadow: 0 1px 0 var(--key-side), 0 1px calc(var(--u) * 0.4) rgba(20, 24, 20, 0.22);
+  box-shadow:
+    0 1px 0 var(--key-side),
+    0 1px calc(var(--u) * 0.5) rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
 .key-labels {
@@ -429,6 +466,7 @@ body {
 .dial-label { margin-bottom: calc(var(--u) * -0.4); }
 
 .dial-knob {
+  position: relative;
   width: calc(var(--u) * 18);
   height: calc(var(--u) * 18);
   border-radius: 50%;
@@ -444,10 +482,57 @@ body {
 .dial-knob .knob-scale text { font-size: 12px; font-weight: 500; }
 .dial-sleep .knob-scale text { font-size: 15px; }
 
+/* головка ручки (слои рисует knob.js, угол — в --angle): рифлёная юбка и риска поворачиваются,
+   хромированный колпачок с бликами стоит на месте */
+.knob-head {
+  position: absolute;
+  inset: 20%;
+  border-radius: 50%;
+  box-shadow: 0 calc(var(--u) * 0.7) calc(var(--u) * 1.4) rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+}
+
+.knob-skirt,
+.knob-index {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  transform: rotate(var(--angle, 0deg));
+  transition: transform 0.16s cubic-bezier(0.3, 0.7, 0.4, 1);
+}
+
+.knob-skirt {
+  background: repeating-conic-gradient(var(--flute) 0 7.2deg, var(--flute-hi) 7.5deg 14.7deg, var(--flute) 15deg);
+  box-shadow: inset 0 0 0 calc(var(--u) * 0.45) var(--knob-rim);
+}
+
+.knob-cap {
+  position: absolute;
+  inset: 20%;
+  border-radius: 50%;
+  background: var(--chrome-cap);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.25), 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+/* риска — на колпачке, от его края почти до центра */
+.knob-index::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 22%;
+  width: 5%;
+  height: 22%;
+  transform: translateX(-50%);
+  border-radius: 999px;
+  background: var(--ink);
+}
+
 /* iPhone: выключенная ручка работает как mute — нажатая чуть утоплена, риска янтарная */
-.dial-knob svg { transition: transform 0.08s ease-out; }
-.dial-knob[aria-pressed='true'] svg { transform: scale(0.94); }
-.dial-knob[aria-pressed='true'] .knob-index { stroke: var(--lamp-on); }
+.dial-knob svg,
+.knob-head { transition: transform 0.08s ease-out; }
+.dial-knob[aria-pressed='true'] svg,
+.dial-knob[aria-pressed='true'] .knob-head { transform: scale(0.94); }
+.dial-knob[aria-pressed='true'] .knob-index::after { background: var(--lamp-on); }
 
 /* подсказка про громкость на iPhone — под ручками */
 .hint {
@@ -473,8 +558,9 @@ body {
 .key:disabled { cursor: default; opacity: 0.5; }
 
 /* ---------- кнопка паспорта: правый верхний угол, напротив надписи ----------
-   Чёрная кнопка с белой точкой в хромированном ободке, под ней гравировка INFO / BACK.
-   Размеры — в долях прибора (макет: ободок 40 px, кнопка 26 px при --u ≈ 4.8 px). */
+   Маленькая чёрная клавиша с белой точкой в хромированной рамке — той же семьи, что PREV / PLAY / NEXT;
+   под ней гравировка INFO / BACK. Размеры — в долях прибора (макет: рамка 34×28 px, клавиша 28×22 px
+   при --u ≈ 4.2 px). */
 .passport-btn {
   position: absolute;
   z-index: 4;
@@ -493,54 +579,51 @@ body {
   user-select: none;
 }
 
-/* палец не обязан попасть в маленький ободок: зона нажатия шире */
+/* палец не обязан попасть в маленькую клавишу: зона нажатия шире */
 .passport-btn::after {
   content: '';
   position: absolute;
   inset: calc(var(--u) * -2);
 }
 
-.pb-bezel {
-  display: grid;
-  place-items: center;
-  width: calc(var(--u) * 8.4);
-  height: calc(var(--u) * 8.4);
-  border-radius: 50%;
-  background: conic-gradient(from 30deg, #c9ccc8, #f7f8f6 15%, #a9aca8 32%, #eef0ed 50%, #b4b7b3 68%, #f5f6f4 84%, #c9ccc8);
+.pb-frame {
+  display: block;
+  padding: calc(var(--u) * 0.7);
+  border-radius: calc(var(--u) * 1.2);
+  background: var(--chrome);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35), inset 0 0 0 1px rgba(0, 0, 0, 0.25);
 }
 
-.pb-cap {
+.pb-key {
+  --depth: calc(var(--u) * 0.8);
   display: grid;
   place-items: center;
-  width: calc(var(--u) * 5.45);
-  height: calc(var(--u) * 5.45);
-  border-radius: 50%;
-  background: radial-gradient(circle at 42% 38%, #3a3b3a, #121312 72%);
-  /* симметричный тёмный зазор вокруг кнопки: точка и кнопка — точно по центру ободка */
+  width: calc(var(--u) * 6.6);
+  height: calc(var(--u) * 4.6);
+  margin-bottom: var(--depth);
+  border-radius: calc(var(--u) * 0.7);
+  background: var(--key);
   box-shadow:
-    0 0 0 calc(var(--u) * 0.42) #0a0a0a,
-    0 0 0 calc(var(--u) * 0.63) rgba(255, 255, 255, 0.35),
-    inset 0 1px 1px rgba(255, 255, 255, 0.18),
-    inset 0 -2px 3px rgba(0, 0, 0, 0.5);
-  transition: transform 0.08s, box-shadow 0.08s, background 0.08s;
+    0 var(--depth) 0 var(--key-side),
+    0 calc(var(--depth) + 1px) calc(var(--u) * 1.4) rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  transition: transform 0.08s ease-out, box-shadow 0.08s ease-out;
 }
 
-.pb-cap i {
+.pb-key i {
   width: calc(var(--u) * 0.84);
   height: calc(var(--u) * 0.84);
   border-radius: 50%;
-  background: #f1eee4;
+  background: var(--key-glyph);
 }
 
-/* нажатие: кнопка уходит внутрь — меньше, зазор шире, тень внутрь; без сдвига по вертикали */
-.passport-btn:active .pb-cap {
-  transform: scale(0.93);
-  background: radial-gradient(circle at 50% 55%, #2c2d2c, #0e0f0e 72%);
+/* нажатие — как у клавиш деки: клавиша уходит вниз на свою высоту хода */
+.passport-btn:active .pb-key {
+  transform: translateY(calc(var(--depth) - 1px));
   box-shadow:
-    0 0 0 calc(var(--u) * 0.73) #0a0a0a,
-    0 0 0 calc(var(--u) * 0.94) rgba(255, 255, 255, 0.25),
-    inset 0 2px 3px rgba(0, 0, 0, 0.7);
+    0 1px 0 var(--key-side),
+    0 1px calc(var(--u) * 0.5) rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
 .pb-caption {
@@ -551,7 +634,7 @@ body {
 }
 
 .passport-btn:focus-visible { outline: none; }
-.passport-btn:focus-visible .pb-bezel { outline: 2px solid var(--lamp-on); outline-offset: 3px; }
+.passport-btn:focus-visible .pb-frame { outline: 2px solid var(--lamp-on); outline-offset: 3px; }
 
 /* ---------- оборот: металлическая табличка-паспорт ---------- */
 .device-back {
@@ -682,7 +765,7 @@ body {
 
 /* ---------- без анимаций ---------- */
 @media (prefers-reduced-motion: reduce) {
-  .key, .hint, .dial-knob svg, .pb-cap { transition: none; }
+  .key, .hint, .dial-knob svg, .knob-head, .knob-skirt, .knob-index, .pb-key { transition: none; }
   /* вместо разворота — смена лица и оборота плавным переходом */
   .unit, .unit.is-flipped, .unit.is-turning:not(.is-flipped) { transition: none; transform: none; }
   .unit > .device, .device-back { transition: opacity 0.25s ease-out; }

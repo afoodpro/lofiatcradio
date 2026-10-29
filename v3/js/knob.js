@@ -1,4 +1,6 @@
-// Поворотная ручка: чёрная рифлёная, белая риска, шкала делений вокруг. Рисуется inline SVG, размер задаёт CSS-бокс элемента.
+// Поворотная ручка: чёрная рифлёная юбка, полированный хромированный колпачок с чёрной риской, шкала делений вокруг.
+// Шкала — inline SVG, головка — слои HTML (вид задаёт device.css: .knob-head, .knob-skirt, .knob-cap, .knob-index);
+// размер задаёт CSS-бокс элемента. Поворачиваются юбка и риска, блики колпачка стоят на месте, как под настоящим светом.
 // Опции: valueText(stepIndex) -> строка для aria-valuetext (сон), scaleLabels — подписи на каждое деление вместо MIN/MAX.
 // Жест: тянуть вверх/вниз или вести по кругу, колесо, клавиши. Вся математика — в knob-math.js.
 import { snap, valueToAngle, dragValue, wheelSteps, WHEEL_THRESHOLD, DRAG_PX_PER_STEP, ANGLE_MIN, ANGLE_MAX } from './knob-math.js';
@@ -6,7 +8,6 @@ import { snap, valueToAngle, dragValue, wheelSteps, WHEEL_THRESHOLD, DRAG_PX_PER
 const NS = 'http://www.w3.org/2000/svg';
 const FONT = 'Teko, "Arial Narrow", sans-serif';
 const INK = '#2a2d2a';
-const FLUTES = 30;
 
 const polar = (r, deg) => {
   const a = deg * Math.PI / 180;
@@ -35,22 +36,6 @@ function scaleMarkup(steps, scaleLabels) {
   return s;
 }
 
-function bodyMarkup() {
-  let flutes = '';
-  for (let i = 0; i < FLUTES; i++) {
-    const deg = 360 * i / FLUTES;
-    const [x1, y1] = polar(23.5, deg);
-    const [x2, y2] = polar(29.5, deg);
-    flutes += `<line x1="${f(x1)}" y1="${f(y1)}" x2="${f(x2)}" y2="${f(y2)}"/>`;
-  }
-  // Одна мягкая тень без filter (id фильтра дублировались бы между ручками).
-  return `<circle cx="50" cy="53" r="31" fill="rgba(0,0,0,0.10)"/><circle cx="50" cy="52" r="30.5" fill="rgba(0,0,0,0.14)"/>` +
-    `<circle cx="50" cy="50" r="30" fill="#161716"/>` +
-    `<g stroke="#3a3d3a" stroke-width="1.3" stroke-linecap="round">${flutes}</g>` +
-    `<circle cx="50" cy="50" r="22" fill="#1d1f1d"/>` +
-    `<circle cx="50" cy="50" r="22" fill="none" stroke="#2f322f" stroke-width="0.8"/>`;
-}
-
 export function createKnob(el, { label, steps = 20, value = 0, disabled = false, valueText, scaleLabels, onChange, onStep, onPress } = {}) {
   let v = snap(value, steps);
   let isDisabled = !!disabled;
@@ -70,19 +55,14 @@ export function createKnob(el, { label, steps = 20, value = 0, disabled = false,
   el.innerHTML =
     `<svg viewBox="0 0 100 100" width="100%" height="100%" focusable="false" aria-hidden="true" style="display:block;overflow:visible">` +
     `<g class="knob-scale">${scaleMarkup(steps, scaleLabels)}</g>` +
-    bodyMarkup() +
-    `<line class="knob-index" x1="50" y1="30" x2="50" y2="45" stroke="#fff" stroke-width="3" stroke-linecap="round"/>` +
-    `</svg>`;
-  const index = el.querySelector('.knob-index');
-  index.style.transformBox = 'view-box';
-  index.style.transformOrigin = '50px 50px';
-  const reduceMotion = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
-  if (!reduceMotion) index.style.transition = 'transform .16s cubic-bezier(.3,.7,.4,1)';
+    `</svg>` +
+    `<span class="knob-head" aria-hidden="true"><span class="knob-skirt"></span><span class="knob-cap"></span><span class="knob-index"></span></span>`;
+  const head = el.querySelector('.knob-head');
 
   const stepOf = (x) => Math.round(snap(x, steps) * steps);
 
   function render() {
-    index.style.transform = `rotate(${valueToAngle(v, steps)}deg)`;
+    head.style.setProperty('--angle', `${valueToAngle(v, steps)}deg`);
     if (isDisabled) {
       el.setAttribute('role', 'button');
       el.setAttribute('aria-pressed', String(pressed));
