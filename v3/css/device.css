@@ -568,10 +568,10 @@ body {
 
 .device-back[hidden] { display: none; }
 
-/* кнопка на обороте — там же, где на лице */
+/* кнопка на обороте — там же, где на лице: справа поле корпуса 5u + отступ в ячейке 1u */
 .device-back .passport-btn {
-  top: var(--btn-top, calc(var(--u) * 3));
-  right: var(--btn-right, calc(var(--u) * 3));
+  top: var(--btn-top, calc(var(--u) * 6));
+  right: calc(var(--u) * 6);
 }
 
 .plate {
@@ -581,7 +581,10 @@ body {
   position: relative;
   width: 100%;
   max-height: 100%;
-  overflow: hidden; /* текст обязан помещаться; прокрутки нет */
+  /* текст помещается без прокрутки; прокрутка — только страховка для крошечного окна или крупного шрифта */
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding: calc(var(--u) * 7.5) var(--pad) calc(var(--u) * 6.5);
   border-radius: calc(var(--u) * 1.4);
   /* шлифованный алюминий: тонкие горизонтальные риски поверх мягких бликов */

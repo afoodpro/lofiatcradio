@@ -4,6 +4,9 @@
 
 const FLIP_MS = 600; // совпадают с transition в device.css
 const FADE_MS = 250; // prefers-reduced-motion: вместо разворота — смена плавным переходом
+const FONT_PRELOAD_DELAY_MS = 3000;
+// Кириллица и латиница: загружаются оба файла unicode-range каждого начертания.
+const FONT_SAMPLE = 'Паспорт Passport';
 
 /**
  * @param {object} o
@@ -19,14 +22,15 @@ export function createPassport({ unit, front, back, button, backButton }) {
 
   const reducedMotion = () => Boolean(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches);
 
-  // Кнопка на обороте стоит там же, где на лице: на высоком телефоне катушка вместе с кнопкой
-  // отцентрована и ниже края корпуса, поэтому положение меряем.
+  // Кнопка на обороте стоит на той же высоте, что на лице: на высоком телефоне катушка вместе
+  // с кнопкой отцентрована и ниже края корпуса, поэтому высоту меряем (по горизонтали отступ
+  // задан в CSS). Только offsetTop: он не зависит от transform, и замер верен и посреди
+  // разворота, и на развёрнутом приборе.
   function place() {
-    const u = unit.getBoundingClientRect();
-    const b = button.getBoundingClientRect();
-    back.style.setProperty('--btn-top', `${Math.round(b.top - u.top)}px`);
-    back.style.setProperty('--btn-right', `${Math.round(u.right - b.right)}px`);
-    back.style.setProperty('--btn-bottom', `${Math.round(b.bottom - u.top)}px`);
+    let top = 0;
+    for (let el = button; el && el !== front; el = el.offsetParent) top += el.offsetTop;
+    back.style.setProperty('--btn-top', `${top}px`);
+    back.style.setProperty('--btn-bottom', `${top + button.offsetHeight}px`);
   }
 
   function show() {
@@ -35,6 +39,7 @@ export function createPassport({ unit, front, back, button, backButton }) {
     clearTimeout(doneTimer);
     place();
     back.hidden = false;
+    back.inert = false;
     front.inert = true;
     unit.classList.add('is-turning');
     void unit.offsetWidth; // старт перехода из исходного положения
@@ -48,6 +53,7 @@ export function createPassport({ unit, front, back, button, backButton }) {
     open = false;
     clearTimeout(doneTimer);
     unit.classList.remove('is-flipped');
+    back.inert = true; // пока оборот уходит, он не держит фокус и не ловит нажатия
     front.inert = false;
     button.setAttribute('aria-expanded', 'false');
     button.focus({ preventScroll: true });
@@ -63,6 +69,16 @@ export function createPassport({ unit, front, back, button, backButton }) {
     if (open && e.key === 'Escape') { e.preventDefault(); hide(); }
   });
   window.addEventListener('resize', () => { if (open) place(); });
+
+  // Шрифт таблички — заранее, в простое: иначе на первом развороте текст перерисуется посреди поворота.
+  const preloadFonts = () => {
+    if (!document.fonts?.load) return;
+    for (const weight of [400, 500]) document.fonts.load(`${weight} 16px Oswald`, FONT_SAMPLE).catch(() => {});
+  };
+  setTimeout(() => {
+    if (window.requestIdleCallback) window.requestIdleCallback(preloadFonts);
+    else preloadFonts();
+  }, FONT_PRELOAD_DELAY_MS);
 
   return { isOpen: () => open, open: show, close: hide };
 }
