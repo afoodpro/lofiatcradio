@@ -2,8 +2,9 @@
 // разворачивает прибор, такая же кнопка на обороте (или Esc) — возвращает; фокус возвращается
 // на кнопку лицевой панели. Ничего не делает при импорте — только при вызове createPassport.
 
-const FLIP_MS = 600; // совпадают с transition в device.css
 import { reducedMotion } from './motion.js';
+
+const FLIP_MS = 600; // совпадают с transition в device.css
 
 const FADE_MS = 250; // при «уменьшении движения» (motion.js): вместо разворота — смена плавным переходом
 const FONT_PRELOAD_DELAY_MS = 3000;

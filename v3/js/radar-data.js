@@ -12,9 +12,9 @@ const CALL_MAX = 7;
 export const MAX_BLIPS = 12;
 export const HUB_CLEAR_R = 0.28; // в единицах r (1 = внешнее кольцо, 0.8R экрана): втулка 0.2R = r 0.25, плюс половина силуэта
 
-// Пустой экран → следующий радиус из RADII; иначе тот же. Радиус не уменьшается.
-export function nextRadius(nm, count) {
-  if (count !== 0) return nm;
+// Бортов меньше k → следующий радиус из RADII; иначе тот же. Радиус не уменьшается.
+export function nextRadius(nm, count, k = MAX_BLIPS) {
+  if (count >= k) return nm;
   const next = RADII.find((r) => r > nm);
   return next === undefined ? nm : next;
 }
@@ -118,14 +118,14 @@ export function createRadarFeed({ onUpdate, fetchFn = (...args) => fetch(...args
       return;
     }
     const dists = data.aircraft.map((a) => project(st.lat, st.lon, 1, a.lat, a.lon).r);
-    const displayNm = chooseDisplayRadius(dists, { maxNm: asked });
+    const displayNm = Math.round(chooseDisplayRadius(dists, { maxNm: asked }));
     const blips = toBlips(st, displayNm, data.aircraft);
     const count = blips.length; // рост и статус решает число видимых бортов
     emit({ nm: asked, displayNm, status: radarStatus({ ok: true, nm: asked, count }), blips });
     const grown = nextRadius(asked, count);
     if (grown !== asked) {
       nm = grown;
-      if (visible()) poll(); // пустой экран: следующий радиус сразу
+      if (visible()) poll(); // бортов мало: следующий радиус сразу
     } else {
       schedule(playing ? POLL_MS : PAUSED_POLL_MS);
     }

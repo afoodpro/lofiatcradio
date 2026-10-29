@@ -51,8 +51,7 @@ function planePath(ctx, s) {
 
 export function createReel(canvas) {
   const ctx = canvas.getContext('2d');
-  const mq = typeof matchMedia === 'function' ? matchMedia('(prefers-reduced-motion: reduce)') : null;
-  let reduced = reducedMotion();
+  const reduced = reducedMotion(); // флаг статичный (motion.js): читаем один раз
   let state = { angle: REST_ANGLE, speed: 0 };
   let playing = false;
   let label = null;
@@ -83,9 +82,6 @@ export function createReel(canvas) {
   const onFonts = () => { glyphs = null; kick(); };
   document.fonts?.load(`500 12px ${RIM_FONT}`).then(onFonts, () => {});
   document.fonts?.addEventListener?.('loadingdone', onFonts);
-
-  const onMotion = () => { reduced = reducedMotion(); if (reduced) state = { angle: state.angle, speed: 0 }; kick(); };
-  mq?.addEventListener?.('change', onMotion);
 
   // ---- цикл ----
   function animating() {
@@ -379,7 +375,7 @@ export function createReel(canvas) {
     },
     // list — отметки с x, y в долях радиуса при масштабе nm (NM на единичный круг).
     setAircraft(list, nm) {
-      planes = Array.isArray(list) ? list.map((p) => ({ xNm: p.x * nm, yNm: p.y * nm, track: p.track, call: p.call })) : [];
+      planes = Array.isArray(list) && Number.isFinite(nm) ? list.map((p) => ({ xNm: p.x * nm, yNm: p.y * nm, track: p.track, call: p.call })) : [];
       kick();
     },
     setLabel(text) {
@@ -387,9 +383,12 @@ export function createReel(canvas) {
       kick();
     },
     setRangeNm(nm) {
-      rangeNm = Number.isFinite(nm) ? nm : null;
+      const next = Number.isFinite(nm) ? nm : null;
+      if (next === rangeNm && rangeAnim) return; // та же цель во время анимации — не перезапускаем
+      rangeNm = next;
       if (rangeNm === null || shownNm === null || reduced) { shownNm = rangeNm; rangeAnim = null; }
       else if (shownNm !== rangeNm) rangeAnim = { from: shownNm, to: rangeNm, t0: null };
+      else rangeAnim = null;
       kick();
     },
     destroy() {
@@ -397,7 +396,6 @@ export function createReel(canvas) {
       if (raf) cancelAnimationFrame(raf);
       raf = 0;
       ro.disconnect();
-      mq?.removeEventListener?.('change', onMotion);
       document.fonts?.removeEventListener?.('loadingdone', onFonts);
     },
   };

@@ -13,13 +13,20 @@ function fakeDocument(state = 'visible') {
   };
 }
 const okRes = (aircraft) => ({ ok: true, json: async () => ({ aircraft }) });
+// n бортов севернее UNNT на 12, 14, … NM: на 40 NM виден 12-й — экран набран, радиус не растёт
+const crowd = (n) => Array.from({ length: n }, (_, i) => ({ hex: `c${i}`, call: `C${i}`, lat: 55.01 + (12 + 2 * i) / 60, lon: 82.65, track: 0 }));
 const plane = { hex: 'a', call: 'AAA1', lat: 55.4, lon: 82.65, track: 90 };
 
-test('радиус растёт только при пустом экране', () => {
+test('радиус растёт, пока бортов меньше 12', () => {
   assert.equal(nextRadius(40, 0), 80);
+  assert.equal(nextRadius(40, 3), 80);
+  assert.equal(nextRadius(80, 11), 150);
   assert.equal(nextRadius(150, 0), 250);
+  assert.equal(nextRadius(40, 12), 40);
+  assert.equal(nextRadius(80, 20), 80);
   assert.equal(nextRadius(250, 0), 250);
-  assert.equal(nextRadius(80, 3), 80);
+  assert.equal(nextRadius(250, 1), 250);
+  assert.equal(nextRadius(40, 3, 3), 40); // свой k
 });
 
 test('статусы и подписи', () => {
@@ -63,23 +70,23 @@ test('ответ прошлой станции игнорируется', async 
   feed.stop();
 });
 
-test('пустой экран: радиус растёт сразу, затем опрос раз в 10 с', async (t) => {
+test('мало бортов: радиус растёт сразу (3 → 7 → 14), затем опрос остаётся на 150 раз в 10 с', async (t) => {
   t.mock.timers.enable({ apis: ['setTimeout'] });
   globalThis.document = fakeDocument();
   const urls = [];
-  const fetchFn = async (url) => { urls.push(url); return okRes(urls.length < 2 ? [] : [{ ...plane }]); };
+  const counts = { 40: 3, 80: 7, 150: 14 };
+  const fetchFn = async (url) => { urls.push(url); return okRes(crowd(counts[url.split('nm=')[1]])); };
   const updates = [];
   const feed = createRadarFeed({ onUpdate: (u) => updates.push(u), fetchFn });
-  const st = { code: 'UNNT', lat: 55.01, lon: 82.65 };
-  feed.start(st);
+  feed.start({ code: 'UNNT', lat: 55.01, lon: 82.65 });
   await flush();
-  assert.equal(urls.length, 2);
-  assert.ok(urls[1].endsWith('nm=80'));
-  assert.equal(updates[1].nm, 80);
+  assert.deepEqual(urls.map((u) => u.split('nm=')[1]), ['40', '80', '150']);
+  assert.deepEqual(updates.map((u) => u.nm), [40, 80, 150]);
+  assert.equal(updates[2].blips.length, 12);
   t.mock.timers.tick(10000);
   await flush();
-  assert.equal(urls.length, 3);
-  assert.ok(urls[2].endsWith('nm=80')); // радиус не уменьшается
+  assert.equal(urls.length, 4);
+  assert.ok(urls[3].endsWith('nm=150')); // радиус не уменьшается и не растёт, пока набрано 12
   feed.stop();
 });
 
@@ -110,7 +117,7 @@ test('пауза в фоне и возобновление', async (t) => {
   const doc = fakeDocument();
   globalThis.document = doc;
   let calls = 0;
-  const fetchFn = async () => { calls += 1; return okRes([{ ...plane }]); };
+  const fetchFn = async () => { calls += 1; return okRes(crowd(12)); };
   const feed = createRadarFeed({ onUpdate() {}, fetchFn });
   feed.start({ code: 'UNNT', lat: 55.01, lon: 82.65 });
   await flush();
@@ -165,7 +172,7 @@ test('onUpdate бросает исключение: опрос продолжа�
   t.mock.timers.enable({ apis: ['setTimeout'] });
   globalThis.document = fakeDocument();
   let calls = 0;
-  const fetchFn = async () => { calls += 1; return okRes([{ ...plane }]); };
+  const fetchFn = async () => { calls += 1; return okRes(crowd(12)); };
   const feed = createRadarFeed({ onUpdate() { throw new Error('boom'); }, fetchFn });
   feed.start({ code: 'UNNT', lat: 55.01, lon: 82.65 });
   await flush();
@@ -179,7 +186,7 @@ test('пауза: опрос раз в 60 с, PLAY подтягивает ожи
   t.mock.timers.enable({ apis: ['setTimeout'] });
   globalThis.document = fakeDocument();
   let calls = 0;
-  const fetchFn = async () => { calls += 1; return okRes([{ ...plane }]); };
+  const fetchFn = async () => { calls += 1; return okRes(crowd(12)); };
   const feed = createRadarFeed({ onUpdate() {}, fetchFn, playing: false });
   feed.start({ code: 'UNNT', lat: 55.01, lon: 82.65 });
   await flush();
@@ -222,7 +229,7 @@ test('chooseDisplayRadius: пусто — maxNm; все близко — minNm',
   assert.equal(chooseDisplayRadius([4, 5, 6], { maxNm: 40 }), 10);
 });
 
-test('feed: борт на 5 NM виден (масштаб 10 NM), displayNm отдаётся', async (t) => {
+test('feed: борт на 5 NM виден (масштаб 10 NM) на первом радиусе; displayNm целое', async (t) => {
   t.mock.timers.enable({ apis: ['setTimeout'] });
   globalThis.document = fakeDocument();
   const fetchFn = async () => okRes([{ hex: 'n', call: 'NEAR1', lat: 55.01 + 5 / 60, lon: 82.65, track: 0 }]);
@@ -230,11 +237,23 @@ test('feed: борт на 5 NM виден (масштаб 10 NM), displayNm от
   const feed = createRadarFeed({ onUpdate: (u) => updates.push(u), fetchFn });
   feed.start({ code: 'UNNT', lat: 55.01, lon: 82.65 });
   await flush();
-  assert.equal(updates.length, 1);
   assert.equal(updates[0].nm, 40);
   assert.equal(updates[0].displayNm, 10);
   assert.equal(updates[0].blips.length, 1);
   assert.ok(Math.abs(Math.hypot(updates[0].blips[0].x, updates[0].blips[0].y) - 0.5) < 0.01);
+  feed.stop();
+});
+
+test('feed: displayNm округляется до целого', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  globalThis.document = fakeDocument();
+  const fetchFn = async () => okRes(crowd(12).map((a, i) => ({ ...a, lat: 55.01 + (12.3 + 2.1 * i) / 60 })));
+  const updates = [];
+  const feed = createRadarFeed({ onUpdate: (u) => updates.push(u), fetchFn });
+  feed.start({ code: 'UNNT', lat: 55.01, lon: 82.65 });
+  await flush();
+  assert.equal(updates[0].nm, 40);
+  assert.ok(Number.isInteger(updates[0].displayNm));
   feed.stop();
 });
 
