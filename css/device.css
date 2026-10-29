@@ -773,6 +773,14 @@ body {
   font: 500 max(11px, calc(var(--fs) * 0.8)) / 1 var(--font-ru);
 }
 
+.plate-note {
+  display: block;
+  margin-top: calc(var(--fs) * 0.12);
+  font-size: var(--small);
+  line-height: 1.3;
+  color: var(--engrave-sub);
+}
+
 .plate-foot {
   margin-top: var(--gap);
   padding-top: var(--gap);
