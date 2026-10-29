@@ -15,7 +15,7 @@ const C = {
   scope: '#171a17',
   ring: 'rgba(220,226,218,0.13)',
   cross: 'rgba(220,226,218,0.07)',
-  runway: 'rgba(233,237,230,0.5)',
+  runway: 'rgba(233,237,230,0.3)',
   screenText: 'rgba(233,237,230,0.45)',
   blip: '238,242,234',
   metalHi: '#eceeea', metalLo: '#c3c7c2',
@@ -150,12 +150,12 @@ export function createReel(canvas) {
     ctx.moveTo(0, -sr); ctx.lineTo(0, sr);
     ctx.moveTo(-sr, 0); ctx.lineTo(sr, 0);
     ctx.stroke();
-    // Полосы аэропорта в центре (условные, под шпинделем).
+    // Полосы аэропорта в центре (условные): длиннее втулки (0.2R), концы видны вокруг неё.
     ctx.strokeStyle = C.runway;
     ctx.lineCap = 'butt';
-    for (const [deg, len, w] of [[-40, R * 0.2, 2], [30, R * 0.15, 1.6]]) {
+    for (const [deg, len, w] of [[-40, R * 0.66, 0.016], [30, R * 0.56, 0.012]]) {
       const a = deg * Math.PI / 180;
-      ctx.lineWidth = w;
+      ctx.lineWidth = Math.max(1.5, R * w);
       ctx.beginPath();
       ctx.moveTo(-Math.cos(a) * len / 2, -Math.sin(a) * len / 2);
       ctx.lineTo(Math.cos(a) * len / 2, Math.sin(a) * len / 2);
