@@ -222,38 +222,12 @@ body {
   /* без container queries (iOS < 16) — фиксированный размер, иначе окно схлопнется в 0 */
   width: calc(var(--u) * 72);
   height: calc(var(--u) * 72);
-  /* с запасом от краёв ячейки: хромированный ободок не подходит к надписи, INFO и краям корпуса */
+  /* с запасом от краёв ячейки: окно не подходит к надписи, INFO и краям корпуса */
   width: min(90cqw, 90cqh, calc(var(--u) * 76));
   height: min(90cqw, 90cqh, calc(var(--u) * 76));
   border-radius: 50%;
   background: var(--seat);
-}
-
-/* неподвижный хромированный ободок вокруг окна (3 % диаметра), снаружи: окно и canvas не уменьшаются.
-   Оба слоя — под canvas (z-index: -1 внутри контекста окна); ::after закрывает середину цветом
-   посадочного места и даёт тонкую тёмную кромку там, где хром встречается с окном. */
-.window::before,
-.window::after {
-  content: '';
-  position: absolute;
-  z-index: -1;
-  border-radius: 50%;
-  pointer-events: none;
-}
-
-.window::before {
-  inset: -3%;
-  background: var(--chrome);
-  box-shadow:
-    inset 0 0 0 1px rgba(0, 0, 0, 0.22),
-    0 1px 2px rgba(0, 0, 0, 0.3),
-    0 calc(var(--u) * 0.5) calc(var(--u) * 1.4) rgba(20, 24, 20, 0.16);
-}
-
-.window::after {
-  inset: 0;
-  background: var(--seat);
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 0 0 calc(var(--u) * 0.9) var(--seat), 0 0 0 calc(var(--u) * 0.9 + 1px) rgba(20, 24, 20, 0.08);
 }
 
 .window canvas {
