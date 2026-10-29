@@ -1,7 +1,7 @@
 // Service worker ATC Live Radio v3. Лежит в корне сайта, scope — /lofiatcradio/ (тот же, что был у v2):
 // браузер находит его как обновление воркера v2 и при первом открытии переводит устройство на v3.
 // CACHE нужно поднимать при каждом изменении списка SHELL.
-const CACHE = 'lofiatc-v3-13';
+const CACHE = 'lofiatc-v3-14';
 
 const SHELL = [
   './',
