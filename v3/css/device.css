@@ -100,20 +100,10 @@ body {
   }
 }
 
-/* швы панелей крест-накрест: вертикальный по центру, горизонтальный — через центр катушки */
-.device::before {
-  content: '';
-  position: absolute;
-  top: 0; bottom: 0; left: 50%;
-  width: 2px;
-  margin-left: -1px;
-  background: linear-gradient(to right, var(--seam-dark) 50%, var(--seam-light) 50%);
-  pointer-events: none;
-}
-
+/* шов панелей: горизонтальный, через центр катушки */
 /* всё на корпусе лежит поверх швов: швы видны только на самой панели */
 .reel-cell > .window, .board, .controls { position: relative; z-index: 1; }
-.device::before, .reel-cell::before { z-index: 0; }
+.reel-cell::before { z-index: 0; }
 
 .reel-cell::before {
   content: '';

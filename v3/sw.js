@@ -1,5 +1,6 @@
 // Service worker ATC Live Radio v3. Лежит в v3/, поэтому его scope — эта папка
 // (на пробном этапе /lofiatcradio/v3/); сервис-воркер v2 в родительской папке не затрагивается.
+// CACHE нужно поднимать при каждом изменении списка SHELL.
 const CACHE = 'lofiatc-v3-1';
 
 const SHELL = [
@@ -36,10 +37,12 @@ const SHELL = [
 
 // Эфир, лофи-поток и радар — всегда напрямую, мимо кеша.
 const BYPASS_HOSTS = ['liveatc.net', 'laut.fm', 'radar.afood.pro'];
+const NETWORK_TIMEOUT_MS = 4000;
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(SHELL)));
-  self.skipWaiting();
+  event.waitUntil(
+    caches.open(CACHE).then((cache) => cache.addAll(SHELL)).then(() => self.skipWaiting()),
+  );
 });
 
 self.addEventListener('activate', (event) => {
@@ -50,11 +53,15 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-async function networkFirst(request) {
+// Всё своё — сначала сеть (чтобы после выката файлы не смешивались по версиям),
+// при сбое или через 4 с — кеш. Обновление кеша живёт до конца через waitUntil.
+async function networkFirst(event) {
+  const { request } = event;
   const cache = await caches.open(CACHE);
+  const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), NETWORK_TIMEOUT_MS));
   try {
-    const response = await fetch(request);
-    if (response.ok) cache.put(request, response.clone());
+    const response = await Promise.race([fetch(request), timeout]);
+    if (response.ok) event.waitUntil(cache.put(request, response.clone()));
     return response;
   } catch (err) {
     const cached = await cache.match(request, { ignoreSearch: true });
@@ -63,27 +70,11 @@ async function networkFirst(request) {
   }
 }
 
-async function staleWhileRevalidate(request) {
-  const cache = await caches.open(CACHE);
-  const cached = await cache.match(request);
-  const refresh = fetch(request)
-    .then((response) => {
-      if (response.ok) cache.put(request, response.clone());
-      return response;
-    })
-    .catch(() => null);
-  if (cached) return cached;
-  const response = await refresh;
-  return response || Response.error();
-}
-
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   if (request.method !== 'GET' || request.headers.has('range')) return;
   const url = new URL(request.url);
   if (BYPASS_HOSTS.some((h) => url.hostname === h || url.hostname.endsWith('.' + h))) return;
   if (url.origin !== self.location.origin) return;
-
-  const isHtml = request.mode === 'navigate' || (request.headers.get('accept') || '').includes('text/html');
-  event.respondWith(isHtml ? networkFirst(request) : staleWhileRevalidate(request));
+  event.respondWith(networkFirst(event));
 });
