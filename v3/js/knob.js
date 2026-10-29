@@ -74,8 +74,10 @@ export function createKnob(el, { label, steps = 20, value = 0, disabled = false,
     `<line class="knob-index" x1="50" y1="30" x2="50" y2="45" stroke="#fff" stroke-width="3" stroke-linecap="round"/>` +
     `</svg>`;
   const index = el.querySelector('.knob-index');
+  index.style.transformBox = 'view-box';
   index.style.transformOrigin = '50px 50px';
-  index.style.transition = 'transform .16s cubic-bezier(.3,.7,.4,1)';
+  const reduceMotion = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (!reduceMotion) index.style.transition = 'transform .16s cubic-bezier(.3,.7,.4,1)';
 
   const stepOf = (x) => Math.round(snap(x, steps) * steps);
 
