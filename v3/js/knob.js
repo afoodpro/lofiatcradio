@@ -1,7 +1,7 @@
 // Поворотная ручка: чёрная рифлёная, белая риска, шкала делений вокруг. Рисуется inline SVG, размер задаёт CSS-бокс элемента.
 // Опции: valueText(stepIndex) -> строка для aria-valuetext (сон), scaleLabels — подписи на каждое деление вместо MIN/MAX.
 // Жест: тянуть вверх/вниз или вести по кругу, колесо, клавиши. Вся математика — в knob-math.js.
-import { snap, valueToAngle, dragValue, ANGLE_MIN, ANGLE_MAX } from './knob-math.js';
+import { snap, valueToAngle, dragValue, wheelSteps, WHEEL_THRESHOLD, DRAG_PX_PER_STEP, ANGLE_MIN, ANGLE_MAX } from './knob-math.js';
 
 const NS = 'http://www.w3.org/2000/svg';
 const FONT = 'Teko, "Arial Narrow", sans-serif';
@@ -51,12 +51,15 @@ function bodyMarkup() {
     `<circle cx="50" cy="50" r="22" fill="none" stroke="#2f322f" stroke-width="0.8"/>`;
 }
 
-export function createKnob(el, { label, steps = 20, value = 0, disabled = false, valueText, scaleLabels, onChange, onPress } = {}) {
+export function createKnob(el, { label, steps = 20, value = 0, disabled = false, valueText, scaleLabels, onChange, onStep, onPress } = {}) {
   let v = snap(value, steps);
   let isDisabled = !!disabled;
   let pressed = false;
   let dragging = false;
   let start = null;
+  let wheelAcc = 0;
+  let lastWheel = 0;
+  const coarse = steps <= 4;
 
   el.classList.add('knob');
   el.style.touchAction = 'none';
@@ -71,11 +74,13 @@ export function createKnob(el, { label, steps = 20, value = 0, disabled = false,
     `<line class="knob-index" x1="50" y1="30" x2="50" y2="45" stroke="#fff" stroke-width="3" stroke-linecap="round"/>` +
     `</svg>`;
   const index = el.querySelector('.knob-index');
+  index.style.transformOrigin = '50px 50px';
+  index.style.transition = 'transform .16s cubic-bezier(.3,.7,.4,1)';
 
   const stepOf = (x) => Math.round(snap(x, steps) * steps);
 
   function render() {
-    index.setAttribute('transform', `rotate(${valueToAngle(v, steps)} 50 50)`);
+    index.style.transform = `rotate(${valueToAngle(v, steps)}deg)`;
     if (isDisabled) {
       el.setAttribute('role', 'button');
       el.setAttribute('aria-pressed', String(pressed));
@@ -107,6 +112,7 @@ export function createKnob(el, { label, steps = 20, value = 0, disabled = false,
     if (changedStep && typeof navigator !== 'undefined' && navigator.vibrate) {
       try { navigator.vibrate(4); } catch (e) { /* нет вибрации — ничего страшного */ }
     }
+    if (changedStep && onStep) onStep(stepOf(v));
     if (onChange) onChange(v);
   }
 
@@ -116,7 +122,7 @@ export function createKnob(el, { label, steps = 20, value = 0, disabled = false,
   }
 
   el.addEventListener('pointerdown', (e) => {
-    if (isDisabled) return;
+    if (isDisabled || e.button !== 0) return;
     dragging = true;
     start = { y: e.clientY, v, a: angleOf(e) };
     try { el.setPointerCapture(e.pointerId); } catch (err) { /* ok */ }
@@ -128,17 +134,25 @@ export function createKnob(el, { label, steps = 20, value = 0, disabled = false,
     let da = angleOf(e) - start.a;
     if (da > 180) da -= 360;
     if (da < -180) da += 360;
-    // Непрерывное значение от старта; commit привязывает к делению.
-    commit(dragValue(start.v, e.clientY - start.y, da));
+    const dy = e.clientY - start.y;
+    // Грубые ручки (сон): целые деления по DRAG_PX_PER_STEP.coarse; остальные — непрерывное значение, commit привязывает к делению.
+    if (coarse) commit(start.v + Math.round(-dy / DRAG_PX_PER_STEP.coarse) / steps);
+    else commit(dragValue(start.v, dy, da));
   });
   const endDrag = () => { dragging = false; start = null; if (!isDisabled) el.style.cursor = 'grab'; };
   el.addEventListener('pointerup', endDrag);
   el.addEventListener('pointercancel', endDrag);
+  el.addEventListener('lostpointercapture', endDrag);
 
   el.addEventListener('wheel', (e) => {
     if (isDisabled) return;
     e.preventDefault();
-    commit(v + (e.deltaY < 0 ? 1 : -1) / steps);
+    const now = performance.now();
+    if (now - lastWheel > 250) wheelAcc = 0;
+    lastWheel = now;
+    const r = wheelSteps(wheelAcc, e.deltaY, e.deltaMode, coarse ? WHEEL_THRESHOLD.coarse : WHEEL_THRESHOLD.fine);
+    wheelAcc = r.acc;
+    if (r.steps) commit(v + r.steps / steps);
   }, { passive: false });
 
   el.addEventListener('click', () => { if (isDisabled && onPress) onPress(); });

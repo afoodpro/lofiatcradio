@@ -25,3 +25,17 @@ export function sleepIndexToMinutes(i) {
 }
 
 export function sleepDeadline(nowMs, minutes) { return minutes > 0 ? nowMs + minutes * 60000 : null; }
+
+// Колесо/трекпад: px прокрутки на одно деление. coarse — для ручек с ≤ 4 положениями (сон).
+export const WHEEL_THRESHOLD = { fine: 40, coarse: 120 };
+// Перетаскивание: px на одно деление.
+export const DRAG_PX_PER_STEP = { fine: 9, coarse: 40 };
+const WHEEL_LINE_PX = 16;
+
+// Копит deltaY; возвращает целые деления (вверх = плюс) и остаток. deltaMode 1 — строки.
+export function wheelSteps(acc, deltaY, deltaMode, threshold) {
+  const px = deltaMode === 1 ? deltaY * WHEEL_LINE_PX : deltaY;
+  const total = acc - px;
+  const steps = Math.trunc(total / threshold) || 0;
+  return { steps, acc: total - steps * threshold };
+}
