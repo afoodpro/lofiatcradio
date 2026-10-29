@@ -1,12 +1,11 @@
-// Паспорт изделия — металлическая табличка на обороте прибора. Кнопка в правом верхнем углу
+// Паспорт изделия — чёрный шильдик со схемой на обороте прибора. Кнопка в правом верхнем углу
 // разворачивает прибор, такая же кнопка на обороте (или Esc) — возвращает; фокус возвращается
 // на кнопку лицевой панели. Ничего не делает при импорте — только при вызове createPassport.
 
 import { reducedMotion } from './motion.js';
 
-const FLIP_MS = 600; // совпадают с transition в device.css
+const HALF_MS = 300; // половина разворота — совпадает с transition .unit в device.css
 
-const FADE_MS = 250; // при «уменьшении движения» (motion.js): вместо разворота — смена плавным переходом
 const FONT_PRELOAD_DELAY_MS = 3000;
 // Кириллица и латиница: загружаются оба файла unicode-range каждого начертания.
 const FONT_SAMPLE = 'Паспорт Passport';
@@ -35,34 +34,54 @@ export function createPassport({ unit, front, back, button, backButton }) {
     back.style.setProperty('--btn-bottom', `${top + button.offsetHeight}px`);
   }
 
+  // Разворот в два шага (см. device.css): уход в профиль → смена сторон → доворот из −90°.
+  let turnToken = 0;
+  function turn(toBack, done) {
+    const token = ++turnToken;
+    clearTimeout(doneTimer);
+    const swap = () => {
+      unit.classList.toggle('show-back', toBack);
+      done();
+    };
+    if (reducedMotion()) { swap(); return; }
+    unit.classList.remove('turn-in-start', 'turning-in', 'no-anim');
+    unit.classList.add('turn-out');
+    doneTimer = setTimeout(() => {
+      if (token !== turnToken) return;
+      unit.classList.add('no-anim', 'turn-in-start');
+      unit.classList.remove('turn-out');
+      swap();
+      void unit.offsetWidth; // зафиксировать −90° без анимации
+      unit.classList.remove('no-anim');
+      unit.classList.add('turning-in');
+      unit.classList.remove('turn-in-start');
+      doneTimer = setTimeout(() => { if (token === turnToken) unit.classList.remove('turning-in'); }, HALF_MS);
+    }, HALF_MS);
+  }
+
   function show() {
     if (open) return;
     open = true;
-    clearTimeout(doneTimer);
     place();
-    back.hidden = false;
-    back.inert = false;
     front.inert = true;
-    unit.classList.add('is-turning');
-    void unit.offsetWidth; // старт перехода из исходного положения
-    unit.classList.add('is-flipped');
     button.setAttribute('aria-expanded', 'true');
-    backButton.focus({ preventScroll: true });
+    turn(true, () => {
+      back.hidden = false;
+      back.inert = false;
+      backButton.focus({ preventScroll: true });
+    });
   }
 
   function hide() {
     if (!open) return;
     open = false;
-    clearTimeout(doneTimer);
-    unit.classList.remove('is-flipped');
     back.inert = true; // пока оборот уходит, он не держит фокус и не ловит нажатия
-    front.inert = false;
     button.setAttribute('aria-expanded', 'false');
-    button.focus({ preventScroll: true });
-    doneTimer = setTimeout(() => {
+    turn(false, () => {
       back.hidden = true;
-      unit.classList.remove('is-turning');
-    }, reducedMotion() ? FADE_MS : FLIP_MS);
+      front.inert = false;
+      button.focus({ preventScroll: true });
+    });
   }
 
   button.addEventListener('click', show);

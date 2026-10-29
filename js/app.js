@@ -40,7 +40,12 @@ let shownTime = '';
 let sleepTimer = null;
 
 // ---- звуки интерфейса (от громкости потоков и mute не зависят) ----
-const sounds = createUiSounds();
+// На iPhone выключены: iOS привязывает шторку, экран блокировки и CarPlay к последнему
+// запущенному <audio> — короткий щелчок перехватывал «Сейчас играет» у потоков (кнопки
+// переставали работать, вместо «станция ±» появлялось «±10 с»). Web Audio это бы обошло,
+// но в v2 оно ломало звук в CarPlay — без проверки в машине не рискуем.
+const SILENT_SOUNDS = { knob() {}, cascade() {}, minute() {}, keyDown() {}, keyUp() {} };
+const sounds = ios ? SILENT_SOUNDS : createUiSounds();
 // Табло на скрытой странице (заблокированный телефон) не звучит: клики без картинки не нужны.
 const visible = () => document.visibilityState === 'visible';
 
@@ -253,6 +258,10 @@ if (mediaSession) {
     stop: () => pause(),
     previoustrack: () => { tapSound(); step(-1); },
     nexttrack: () => { tapSound(); step(1); },
+    // Перемотки у живого эфира нет: без явного null iOS рисует «±10 с» вместо «станция ±».
+    seekbackward: null,
+    seekforward: null,
+    seekto: null,
   };
   for (const [action, fn] of Object.entries(handlers)) {
     try { mediaSession.setActionHandler(action, fn); } catch { /* действие не поддерживается */ }

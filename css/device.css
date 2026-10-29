@@ -100,23 +100,20 @@ body {
 }
 
 /* ---------- корпус: лицо и оборот разворачиваются вместе ---------- */
+/* Разворот в два шага: корпус уходит в профиль (90°), в этот миг лицо и оборот меняются местами,
+   и корпус доворачивается из −90° в 0. На backface-visibility не опираемся: iPhone (WebKit) его
+   не соблюдает для слоёв внутри (canvas катушки, ручки, флажки) — лицо просвечивало сквозь оборот. */
 .unit {
   position: relative;
   width: var(--dw);
   height: var(--dh);
-  transition: transform 0.6s cubic-bezier(0.45, 0.05, 0.25, 1);
+  transition: transform 0.3s cubic-bezier(0.55, 0, 0.75, 0.6);
 }
-
-/* 3D-контекст только на время паспорта: в покое лицевая панель рисуется как обычно */
-.unit.is-turning { transform-style: preserve-3d; }
-.unit.is-flipped { transform: perspective(calc(var(--dw) * 4)) rotateY(180deg); }
-.unit.is-turning:not(.is-flipped) { transform: perspective(calc(var(--dw) * 4)) rotateY(0deg); }
-
-.unit.is-turning > .device,
-.device-back {
-  -webkit-backface-visibility: hidden;
-  backface-visibility: hidden;
-}
+.unit.turn-out { transform: perspective(calc(var(--dw) * 4)) rotateY(90deg); }
+.unit.turn-in-start { transform: perspective(calc(var(--dw) * 4)) rotateY(-90deg); }
+.unit.no-anim { transition: none; }
+.unit.turning-in { transition-timing-function: cubic-bezier(0.25, 0.4, 0.45, 1); }
+.unit.show-back > .device { visibility: hidden; }
 
 .device {
   position: relative;
@@ -626,7 +623,6 @@ body {
   /* табличка — под кнопкой (её положение меряет passport.js) */
   padding: calc(var(--btn-bottom, calc(var(--u) * 12)) + var(--u) * 2) calc(var(--u) * 5) calc(var(--u) * 6);
   background: var(--body);
-  transform: rotateY(180deg);
 }
 
 .device-back[hidden] { display: none; }
@@ -803,11 +799,11 @@ body {
 html.reduce-motion .key, html.reduce-motion .hint, html.reduce-motion .dial-knob svg, html.reduce-motion .knob-head,
 html.reduce-motion .knob-skirt, html.reduce-motion .knob-index, html.reduce-motion .pb-key { transition: none; }
 /* вместо разворота — смена лица и оборота плавным переходом */
-html.reduce-motion .unit, html.reduce-motion .unit.is-flipped, html.reduce-motion .unit.is-turning:not(.is-flipped) { transition: none; transform: none; }
+html.reduce-motion .unit, html.reduce-motion .unit.turn-out, html.reduce-motion .unit.turn-in-start { transition: none; transform: none; }
 html.reduce-motion .unit > .device, html.reduce-motion .device-back { transition: opacity 0.25s ease-out; }
 html.reduce-motion .device-back { transform: none; opacity: 0; }
-html.reduce-motion .unit.is-flipped > .device { opacity: 0; }
-html.reduce-motion .unit.is-flipped > .device-back { opacity: 1; }
+html.reduce-motion .unit.show-back > .device { opacity: 0; }
+html.reduce-motion .unit.show-back > .device-back { opacity: 1; }
 html.reduce-motion .lamp[data-state='blink'] {
   animation: none;
   background: var(--lamp-on);
