@@ -6,6 +6,7 @@ export const RADAR_BASE = 'https://radar.afood.pro';
 export const RADII = [40, 80, 150, 250];
 const POLL_MS = 10000;
 const RETRY_MS = 30000;
+const TIMEOUT_MS = 10000;
 const CALL_MAX = 7;
 
 // Пустой экран → следующий радиус из RADII; иначе тот же. Радиус не уменьшается.
@@ -44,9 +45,20 @@ export function createRadarFeed({ onUpdate, fetchFn = (...args) => fetch(...args
   let timer = null;
   let inflight = false;
   let listening = false;
+  let ctl = null;
+  let abortTimer = null;
 
   const visible = () => globalThis.document?.visibilityState === 'visible';
   const clearTimer = () => { if (timer !== null) { clearTimeout(timer); timer = null; } };
+
+  function emit(update) {
+    try { onUpdate(update); } catch { /* сбой потребителя не должен останавливать опрос */ }
+  }
+
+  function dropRequest() {
+    if (abortTimer !== null) { clearTimeout(abortTimer); abortTimer = null; }
+    if (ctl) { ctl.abort(); ctl = null; }
+  }
 
   function schedule(ms) {
     clearTimer();
@@ -60,9 +72,12 @@ export function createRadarFeed({ onUpdate, fetchFn = (...args) => fetch(...args
     const st = station;
     const asked = nm;
     inflight = true;
+    const mine = new AbortController();
+    ctl = mine;
+    abortTimer = setTimeout(() => mine.abort(), TIMEOUT_MS);
     let data = null;
     try {
-      const res = await fetchFn(`${RADAR_BASE}/v1/aircraft?station=${encodeURIComponent(st.code)}&nm=${asked}`);
+      const res = await fetchFn(`${RADAR_BASE}/v1/aircraft?station=${encodeURIComponent(st.code)}&nm=${asked}`, { signal: mine.signal });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       data = await res.json();
       if (!data || !Array.isArray(data.aircraft)) throw new Error('bad payload');
@@ -71,14 +86,16 @@ export function createRadarFeed({ onUpdate, fetchFn = (...args) => fetch(...args
     }
     if (myGen !== gen) return; // станция сменилась или feed остановлен; inflight уже сброшен
     inflight = false;
+    if (abortTimer !== null) { clearTimeout(abortTimer); abortTimer = null; }
+    ctl = null;
     if (!data) {
-      onUpdate({ nm: asked, status: 'offline', blips: [] });
+      emit({ nm: asked, status: 'offline', blips: [] });
       schedule(RETRY_MS);
       return;
     }
-    const count = data.aircraft.length;
     const blips = toBlips(st, asked, data.aircraft);
-    onUpdate({ nm: asked, status: radarStatus({ ok: true, nm: asked, count }), blips });
+    const count = blips.length; // рост и статус решает число бортов внутри круга
+    emit({ nm: asked, status: radarStatus({ ok: true, nm: asked, count }), blips });
     const grown = nextRadius(asked, count);
     if (grown !== asked) {
       nm = grown;
@@ -101,6 +118,7 @@ export function createRadarFeed({ onUpdate, fetchFn = (...args) => fetch(...args
     start(next) {
       gen += 1;
       inflight = false;
+      dropRequest();
       clearTimer();
       station = next;
       nm = RADII[0];
@@ -114,6 +132,7 @@ export function createRadarFeed({ onUpdate, fetchFn = (...args) => fetch(...args
       gen += 1;
       inflight = false;
       station = null;
+      dropRequest();
       clearTimer();
     },
   };

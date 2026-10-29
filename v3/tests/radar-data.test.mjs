@@ -124,3 +124,53 @@ test('пауза в фоне и возобновление', async (t) => {
   assert.equal(calls, 2);
   feed.stop();
 });
+
+test('зависший запрос: через 10 с offline, через ещё 30 с новый запрос', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  globalThis.document = fakeDocument();
+  let calls = 0;
+  const fetchFn = (url, { signal }) => {
+    calls += 1;
+    return new Promise((_, reject) => signal.addEventListener('abort', () => reject(new Error('aborted'))));
+  };
+  const updates = [];
+  const feed = createRadarFeed({ onUpdate: (u) => updates.push(u), fetchFn });
+  feed.start({ code: 'UNNT', lat: 55, lon: 82 });
+  await flush();
+  assert.equal(updates.length, 0);
+  t.mock.timers.tick(10000);
+  await flush();
+  assert.equal(updates.length, 1);
+  assert.equal(updates[0].status, 'offline');
+  t.mock.timers.tick(30000);
+  await flush();
+  assert.equal(calls, 2);
+  feed.stop();
+});
+
+test('борты только вне круга: радиус растёт', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  globalThis.document = fakeDocument();
+  const urls = [];
+  const fetchFn = async (url) => { urls.push(url); return okRes([{ hex: 'f', call: 'FAR', lat: 57, lon: 82.65, track: 0 }]); };
+  const feed = createRadarFeed({ onUpdate() {}, fetchFn });
+  feed.start({ code: 'UNNT', lat: 55.01, lon: 82.65 });
+  await flush();
+  assert.ok(urls[0].endsWith('nm=40'));
+  assert.ok(urls[1].endsWith('nm=80'));
+  feed.stop();
+});
+
+test('onUpdate бросает исключение: опрос продолжается', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  globalThis.document = fakeDocument();
+  let calls = 0;
+  const fetchFn = async () => { calls += 1; return okRes([{ ...plane }]); };
+  const feed = createRadarFeed({ onUpdate() { throw new Error('boom'); }, fetchFn });
+  feed.start({ code: 'UNNT', lat: 55.01, lon: 82.65 });
+  await flush();
+  t.mock.timers.tick(10000);
+  await flush();
+  assert.equal(calls, 2);
+  feed.stop();
+});
