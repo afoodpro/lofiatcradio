@@ -1,0 +1,471 @@
+/* ATC Live Radio v3 — лицевая панель прибора AR-1.
+   Все размеры прибора — в долях его ширины (--u = 1/100 ширины), поэтому он одинаково
+   выглядит и во весь экран телефона, и по центру окна компьютера. */
+
+@font-face { font-family: 'Teko'; font-style: normal; font-weight: 400; font-display: swap; src: url('../fonts/teko-latin-400-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Teko'; font-style: normal; font-weight: 500; font-display: swap; src: url('../fonts/teko-latin-500-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Teko'; font-style: normal; font-weight: 600; font-display: swap; src: url('../fonts/teko-latin-600-normal.woff2') format('woff2'); }
+
+:root {
+  /* корпус и подписи */
+  --body: #e3e5e2;
+  --page: #d3d6d2;
+  --ink: #141414;
+  --sub: #8e918d;
+  --seam-dark: rgba(20, 24, 20, 0.075);
+  --seam-light: rgba(255, 255, 255, 0.55);
+  --seat: #d6d9d5;
+  /* экран радара (рисует reel.js) */
+  --screen: #171a17;
+  /* табло */
+  --board: #111211;
+  --board-edge: #0a0b0a;
+  --flap: #272827;
+  --flap-top: #2d2e2d;
+  --flap-split: #0c0d0c;
+  --char: #ecebe4;
+  /* клавиши */
+  --tray: #bcbfba;
+  --key: #f1f2f0;
+  --key-down: #dfe1de;
+  --key-side: #a5a8a3;
+  /* лампочка */
+  --lamp-off: #b7a685;
+  --lamp-on: #ffab24;
+
+  --font: 'Teko', 'Arial Narrow', sans-serif;
+
+  /* размер прибора: телефон — весь экран */
+  --dh: 100vh;
+  --dh: 100dvh;
+  --dw: 100vw;
+  --u: calc(var(--dw) / 100);
+}
+
+/* компьютер и планшет: прибор по центру, высота по окну */
+@media (min-width: 600px) {
+  :root {
+    --dh: min(calc(100vh - 96px), 1040px, calc((100vw - 48px) / 0.58));
+    --dh: min(calc(100dvh - 96px), 1040px, calc((100vw - 48px) / 0.58));
+    --dw: calc(var(--dh) * 0.58);
+  }
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--body);
+  color: var(--ink);
+  font-family: var(--font);
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  display: grid;
+  place-items: center;
+}
+
+@media (min-width: 600px) {
+  html, body { background: var(--page); }
+}
+
+.sr-only {
+  position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+/* ---------- корпус ---------- */
+.device {
+  position: relative;
+  width: var(--dw);
+  height: var(--dh);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-evenly;
+  padding: calc(var(--u) * 6) calc(var(--u) * 5) calc(var(--u) * 6.5);
+  background: var(--body);
+}
+
+@media (min-width: 600px) {
+  .device {
+    border-radius: calc(var(--u) * 6);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.7),
+      0 0 0 1px rgba(20, 24, 20, 0.06),
+      0 calc(var(--u) * 6) calc(var(--u) * 12) calc(var(--u) * -6) rgba(20, 24, 20, 0.28);
+  }
+}
+
+/* швы панелей крест-накрест: вертикальный по центру, горизонтальный — через центр катушки */
+.device::before {
+  content: '';
+  position: absolute;
+  top: 0; bottom: 0; left: 50%;
+  width: 2px;
+  margin-left: -1px;
+  background: linear-gradient(to right, var(--seam-dark) 50%, var(--seam-light) 50%);
+  pointer-events: none;
+}
+
+/* всё на корпусе лежит поверх швов */
+.reel-cell > .window, .board, .controls { position: relative; z-index: 1; }
+
+.reel-cell::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: calc(var(--u) * -5);
+  right: calc(var(--u) * -5);
+  height: 2px;
+  margin-top: -1px;
+  background: linear-gradient(to bottom, var(--seam-dark) 50%, var(--seam-light) 50%);
+  pointer-events: none;
+}
+
+/* ---------- надпись и лампочка ---------- */
+.brand {
+  position: absolute;
+  z-index: 2;
+  top: calc(var(--u) * 6);
+  left: calc(var(--u) * 6);
+  pointer-events: none;
+}
+
+.title {
+  margin: 0;
+  font-weight: 500;
+  font-size: calc(var(--u) * 4.6);
+  line-height: 0.88;
+  letter-spacing: 0.01em;
+  color: var(--ink);
+}
+
+.title span {
+  display: block;
+  color: var(--sub);
+}
+
+.lamp {
+  display: block;
+  width: calc(var(--u) * 2.1);
+  height: calc(var(--u) * 2.1);
+  margin-top: calc(var(--u) * 2.6);
+  border-radius: 50%;
+  background: var(--lamp-off);
+  box-shadow: 0 0 0 calc(var(--u) * 0.45) var(--seat);
+}
+
+.lamp[data-state='on'],
+.lamp[data-state='blink'] {
+  background: var(--lamp-on);
+  box-shadow: 0 0 0 calc(var(--u) * 0.45) var(--seat), 0 0 calc(var(--u) * 1.6) rgba(255, 171, 36, 0.7);
+}
+
+.lamp[data-state='blink'] { animation: lamp-blink 1s steps(1, end) infinite; }
+
+@keyframes lamp-blink {
+  50% { background: var(--lamp-off); box-shadow: 0 0 0 calc(var(--u) * 0.45) var(--seat); }
+}
+
+/* ---------- катушка-радар ---------- */
+.reel-cell {
+  position: relative;
+  flex: 0 1 calc(var(--u) * 85);
+  min-height: 0;
+  container-type: size;
+  display: grid;
+  place-items: center;
+}
+
+/* Окно — квадрат по меньшей стороне ячейки; размер canvas задаёт CSS, а не его bitmap. */
+.window {
+  position: relative;
+  width: min(100cqw, 100cqh);
+  height: min(100cqw, 100cqh);
+  border-radius: 50%;
+  background: var(--seat);
+  box-shadow: 0 0 0 calc(var(--u) * 0.9) var(--seat), 0 0 0 calc(var(--u) * 0.9 + 1px) rgba(20, 24, 20, 0.08);
+}
+
+.window canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* ---------- табло ---------- */
+.board {
+  flex: none;
+  align-self: center;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: calc(var(--u) * 1.5);
+  margin: calc(var(--u) * 4) 0 0;
+  padding: calc(var(--u) * 2.6);
+  border: 0;
+  border-radius: calc(var(--u) * 1.6);
+  background: var(--board);
+  box-shadow: 0 0 0 calc(var(--u) * 0.5) var(--board-edge), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  color: var(--char);
+  font: inherit;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.board:focus-visible,
+.key:focus-visible,
+.dial-knob:focus-visible,
+.tg:focus-visible {
+  outline: 2px solid var(--lamp-on);
+  outline-offset: 3px;
+}
+
+.board-row,
+.board-group {
+  display: flex;
+  gap: calc(var(--u) * 0.45);
+}
+
+.row-code {
+  justify-content: center;
+  gap: calc(var(--u) * 1.1);
+  margin-bottom: calc(var(--u) * 0.7);
+}
+
+.row-info { justify-content: space-between; }
+
+/* перекидной флажок (разметку и анимацию делает flap.js) */
+.cell {
+  --w: calc(var(--u) * 4.9);
+  --h: calc(var(--u) * 7.4);
+  --fs: calc(var(--u) * 6.6);
+  --r: calc(var(--u) * 0.45);
+  position: relative;
+  flex: none;
+  width: var(--w);
+  height: var(--h);
+  border-radius: var(--r);
+  perspective: calc(var(--u) * 60);
+}
+
+.cell.lg {
+  --w: calc(var(--u) * 13.4);
+  --h: calc(var(--u) * 17.6);
+  --fs: calc(var(--u) * 16.2);
+  --r: calc(var(--u) * 0.8);
+}
+
+.cell > span {
+  position: absolute;
+  left: 0; right: 0;
+  height: 50%;
+  overflow: hidden;
+  background: var(--flap);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.cell > span b {
+  position: absolute;
+  left: 0; right: 0;
+  height: var(--h);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-top: 0.12em;
+  font: 500 var(--fs) / 1 var(--font);
+  color: var(--char);
+}
+
+.cell .u, .cell .fu { top: 0; border-radius: var(--r) var(--r) 0 0; background: var(--flap-top); }
+.cell .d, .cell .fd { bottom: 0; border-radius: 0 0 var(--r) var(--r); }
+.cell .d b, .cell .fd b { top: calc(var(--h) / -2); }
+.cell .fu { transform-origin: 50% 100%; z-index: 2; }
+.cell .fd { transform-origin: 50% 0; z-index: 2; transform: rotateX(90deg); }
+
+/* волосяной разрез посередине флажка */
+.cell::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 0; top: 50%;
+  height: 1px;
+  margin-top: -0.5px;
+  background: var(--flap-split);
+  z-index: 3;
+}
+
+/* ---------- нижний ряд ---------- */
+.controls {
+  position: relative;
+  flex: none;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-top: calc(var(--u) * 4);
+}
+
+/* клавиши магнитофона */
+.keys {
+  display: flex;
+  gap: calc(var(--u) * 0.7);
+  padding: calc(var(--u) * 0.8);
+  border-radius: calc(var(--u) * 1.4);
+  background: var(--tray);
+  box-shadow: inset 0 calc(var(--u) * 0.4) calc(var(--u) * 0.8) rgba(20, 24, 20, 0.2);
+}
+
+.key {
+  --depth: calc(var(--u) * 0.9);
+  display: grid;
+  place-items: center;
+  width: calc(var(--u) * 10.4);
+  height: calc(var(--u) * 9);
+  margin-bottom: var(--depth);
+  padding: 0;
+  border: 0;
+  border-radius: calc(var(--u) * 0.7);
+  background: var(--key);
+  box-shadow: 0 var(--depth) 0 var(--key-side), 0 calc(var(--depth) + 1px) calc(var(--u) * 1.2) rgba(20, 24, 20, 0.22);
+  color: var(--ink);
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: transform 0.08s ease-out, box-shadow 0.08s ease-out, background-color 0.08s;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.key svg {
+  width: calc(var(--u) * 3.3);
+  height: calc(var(--u) * 3.3);
+  fill: currentColor;
+}
+
+/* «проваливается» при нажатии; PLAY остаётся утопленной, пока играет */
+.key:active,
+.key.is-down,
+.key[aria-pressed='true'] {
+  transform: translateY(calc(var(--depth) - 1px));
+  background: var(--key-down);
+  box-shadow: 0 1px 0 var(--key-side), 0 1px calc(var(--u) * 0.4) rgba(20, 24, 20, 0.22);
+}
+
+.key-labels {
+  display: flex;
+  gap: calc(var(--u) * 0.7);
+  padding: 0 calc(var(--u) * 0.8);
+  margin-top: calc(var(--u) * 1.6);
+}
+
+.key-labels span,
+.dial-label {
+  font-weight: 500;
+  font-size: calc(var(--u) * 2.9);
+  line-height: 1;
+  letter-spacing: 0.1em;
+  color: var(--sub);
+  text-align: center;
+}
+
+.key-labels span { width: calc(var(--u) * 10.4); }
+
+/* ручки */
+.dials {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+}
+
+.dial {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.dial-label { margin-bottom: calc(var(--u) * -0.4); }
+
+.dial-knob {
+  width: calc(var(--u) * 18);
+  height: calc(var(--u) * 18);
+  border-radius: 50%;
+}
+
+.dial-sleep { margin-right: calc(var(--u) * 0.6); }
+.dial-sleep .dial-knob {
+  width: calc(var(--u) * 15);
+  height: calc(var(--u) * 15);
+}
+
+/* подписи шкалы крупнее, чем рисует knob.js (CSS перекрывает атрибут font-size в SVG) */
+.dial-knob .knob-scale text { font-size: 12px; font-weight: 500; }
+.dial-sleep .knob-scale text { font-size: 15px; }
+
+/* iPhone: выключенная ручка работает как mute — нажатая чуть утоплена, риска янтарная */
+.dial-knob svg { transition: transform 0.08s ease-out; }
+.dial-knob[aria-pressed='true'] svg { transform: scale(0.94); }
+.dial-knob[aria-pressed='true'] .knob-index { stroke: var(--lamp-on); }
+
+/* подсказка про громкость на iPhone — под ручками */
+.hint {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin: calc(var(--u) * 0.8) 0 0;
+  font-size: calc(var(--u) * 3);
+  line-height: 1;
+  letter-spacing: 0.04em;
+  color: var(--sub);
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.2s;
+  pointer-events: none;
+}
+
+.hint.is-shown { opacity: 1; }
+
+/* ---------- Telegram ---------- */
+.tg {
+  position: absolute;
+  left: 50%;
+  bottom: calc(var(--u) * 1.4);
+  display: grid;
+  place-items: center;
+  width: calc(var(--u) * 6);
+  height: calc(var(--u) * 6);
+  margin-left: calc(var(--u) * -3);
+  border-radius: 50%;
+  color: var(--sub);
+  opacity: 0.7;
+}
+
+.tg svg { width: 55%; height: 55%; fill: currentColor; }
+.tg:hover { opacity: 1; }
+
+/* на компьютере — под прибором */
+@media (min-width: 600px) {
+  .tg {
+    top: calc(100% + 16px);
+    bottom: auto;
+    width: 28px;
+    height: 28px;
+    margin-left: -14px;
+  }
+}
+
+/* ---------- без анимаций ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .key, .hint, .dial-knob svg { transition: none; }
+  .lamp[data-state='blink'] {
+    animation: none;
+    background: var(--lamp-on);
+    opacity: 0.55;
+  }
+}
