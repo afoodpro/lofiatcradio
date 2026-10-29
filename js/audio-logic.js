@@ -1,4 +1,9 @@
 export const LOFI_URL = 'https://radiorecord.hostingradio.ru/lofi96.aacp';
+// Каждый запуск — новый адрес, как у ATC: на iPhone после паузы повторная загрузка того же адреса
+// живого потока не оживляла музыку (ATC с меткой времени играл, лофи молчал; 29.10).
+export function lofiUrl(nowMs) {
+  return `${LOFI_URL}?nocache=${nowMs}`;
+}
 export const IOS_LEVELS = { lofi: 0.5, atc: 1.0 };
 
 const RETRY_DELAYS = [2000, 5000, 10000, 20000, 30000];

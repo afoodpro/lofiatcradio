@@ -1,5 +1,5 @@
 import { atcUrl } from './stations.js';
-import { LOFI_URL, IOS_LEVELS, retryDelay, stallCheck, atcStatus } from './audio-logic.js';
+import { lofiUrl, IOS_LEVELS, retryDelay, stallCheck, atcStatus } from './audio-logic.js';
 
 const EXTERNAL_RESUME_MS = 800;
 const WATCH_INTERVAL_MS = 2000;
@@ -33,7 +33,7 @@ export function createAudio({ ios, autoResume = true, onState = () => {}, create
   let fadeFactor = 1;
 
   const streams = {
-    lofi: { el: lofiEl, failures: 0, attempt: 0, timer: null, lastProgressAt: 0, buffering: false, url: () => LOFI_URL },
+    lofi: { el: lofiEl, failures: 0, attempt: 0, timer: null, lastProgressAt: 0, buffering: false, url: () => lofiUrl(Date.now()) },
     atc: { el: atcEl, failures: 0, attempt: 0, timer: null, lastProgressAt: 0, buffering: false, url: () => (station ? atcUrl(station, Date.now()) : null) },
   };
 
