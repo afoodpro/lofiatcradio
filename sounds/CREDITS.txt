@@ -1,4 +1,4 @@
 UI sounds for ATC Live Radio v3 (cut, faded and normalised to ~10% peak level, about -20 dBFS):
 - knob-tick.mp3 — "knob click 1.wav" by lolamadeus, https://freesound.org/people/lolamadeus/sounds/144194/ — CC0 1.0
-- flap-1..5.mp3 — "Split Flap Display" by ngruber, https://freesound.org/people/ngruber/sounds/261244/ — CC0 1.0
+- flap-cascade.mp3, flap-minute.mp3 — mixed from single flaps of "Split Flap Display" by ngruber, https://freesound.org/people/ngruber/sounds/261244/ — CC0 1.0
 - key-down.mp3, key-up.mp3 — "Tape Deck Buttons and Switches" by Nekkowe, https://freesound.org/people/Nekkowe/sounds/403247/ — CC0 1.0

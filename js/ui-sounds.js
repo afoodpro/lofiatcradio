@@ -29,6 +29,7 @@ function play(a) {
 export function createUiSounds({
   base = new URL('../sounds/', import.meta.url),
   createAudio = (src) => new Audio(src),
+  now = () => performance.now(),
 } = {}) {
   const make = (file) => {
     const a = createAudio(new URL(file, base).href);
@@ -49,23 +50,19 @@ export function createUiSounds({
   };
 
   const knobPool = lazy(() => pool(['knob-tick.mp3'], 4));
-  const flapFiles = Array.from({ length: 5 }, (_, i) => `flap-${i + 1}.mp3`);
+  // Каскад табло — один заранее сведённый файл на смену станции, а не щелчок на каждый шаг флажка:
+  // в WebKit (iPhone) каждый play() у <audio> блокирует страницу, и 30–40 запусков подряд рвали анимацию.
+  const cascadePool = lazy(() => pool(['flap-cascade.mp3'], 2));
+  const minutePool = lazy(() => pool(['flap-minute.mp3'], 1));
   const downPool = lazy(() => pool(['key-down.mp3'], 2));
   const upPool = lazy(() => pool(['key-up.mp3'], 2));
-  const knobOk = createRateLimiter(28);
-  const flapOk = createRateLimiter(38);
-  let flapPrev = -1;
-  const flapItems = [];
+  const knobOk = createRateLimiter(28, now);
+  const cascadeOk = createRateLimiter(250, now);
 
   return {
     knob() { if (knobOk()) play(knobPool()); },
-    flap() {
-      if (!flapOk()) return;
-      // 5 вариантов, не повторяя предыдущий; у каждого свой маленький пул (всего 10 элементов).
-      if (!flapItems.length) flapFiles.forEach((f) => flapItems.push(pool([f], 2)));
-      flapPrev = pickVariant(flapItems.length, flapPrev);
-      play(flapItems[flapPrev]());
-    },
+    cascade() { if (cascadeOk()) play(cascadePool()); },
+    minute() { play(minutePool()); },
     keyDown() { play(downPool()); },
     keyUp() { play(upPool()); },
   };

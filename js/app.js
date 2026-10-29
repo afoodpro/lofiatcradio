@@ -41,16 +41,16 @@ let sleepTimer = null;
 
 // ---- звуки интерфейса (от громкости потоков и mute не зависят) ----
 const sounds = createUiSounds();
-// Табло щёлкает и на скрытой странице (заблокированный телефон): тогда клики без картинки не нужны.
-const onFlip = () => { if (document.visibilityState === 'visible') sounds.flap(); };
+// Табло на скрытой странице (заблокированный телефон) не звучит: клики без картинки не нужны.
+const visible = () => document.visibilityState === 'visible';
 
 // ---- табло ----
 const rows = {
-  code: createFlapRow($('f-code'), 4, 'lg', { onFlip }),
-  city: createFlapRow($('f-city'), 14, 'md', { onFlip }),
-  time: createFlapRow($('f-time'), 5, 'md', { onFlip }),
-  freq: createFlapRow($('f-freq'), 5, 'md', { onFlip }),
-  pos: createFlapRow($('f-pos'), 3, 'md', { onFlip }),
+  code: createFlapRow($('f-code'), 4, 'lg'),
+  city: createFlapRow($('f-city'), 14, 'md'),
+  time: createFlapRow($('f-time'), 5, 'md'),
+  freq: createFlapRow($('f-freq'), 5, 'md'),
+  pos: createFlapRow($('f-pos'), 3, 'md'),
 };
 
 const shownStation = () => findStation(stations, shownCode);
@@ -67,6 +67,7 @@ function renderBoard() {
   rows.freq.set(f.freq);
   rows.pos.set(posText(st, f));
   shownTime = f.time;
+  if (visible()) sounds.cascade();
 }
 
 // Время перещёлкивается само на смене минуты.
@@ -74,7 +75,7 @@ setInterval(() => {
   const st = shownStation();
   if (!st) return;
   const t = boardFields(st, new Date()).time;
-  if (t !== shownTime) { shownTime = t; rows.time.set(t); }
+  if (t !== shownTime) { shownTime = t; rows.time.set(t); if (visible()) sounds.minute(); }
 }, CLOCK_CHECK_MS);
 
 if (reducedMotion()) document.documentElement.classList.add('reduce-motion');
