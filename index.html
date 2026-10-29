@@ -87,25 +87,71 @@
       <div class="plate">
         <span class="screw" aria-hidden="true"></span><span class="screw" aria-hidden="true"></span><span class="screw" aria-hidden="true"></span><span class="screw" aria-hidden="true"></span>
         <p class="plate-model" lang="en">AR-1 · APPROACH RECORDER</p>
-        <h2 class="plate-title" id="passport-title">ПАСПОРТ ИЗДЕЛИЯ</h2>
-        <p class="plate-lead">Лофи-музыка и живой эфир авиадиспетчеров семи аэропортов мира.</p>
-        <ul class="plate-list">
-          <li>PLAY — включить / пауза</li>
-          <li>PREV, NEXT или табло — другая станция</li>
-          <li>LO-FI, ATC — громкость музыки и эфира</li>
-          <li>SLEEP — выключить через 30, 60 или 90 мин</li>
-          <li>На iPhone громкость — кнопками телефона, нажатие на ручку — без звука</li>
-          <li>Радар — самолёты рядом с аэропортом, время на табло — местное</li>
-        </ul>
-        <ul class="plate-list">
-          <li>Эфир — LiveATC.net · <a href="https://www.liveatc.net/" target="_blank" rel="noopener">поддержать</a></li>
-          <li>Музыка — Radio Record, канал Lo-Fi</li>
-          <li>Самолёты — adsb.lol, OpenSky Network</li>
-          <li>Звуки — freesound.org (CC0)</li>
-        </ul>
+        <h2 class="plate-title" id="passport-title">СХЕМА ОРГАНОВ УПРАВЛЕНИЯ</h2>
+        <!-- Схема лицевой панели: координаты — доли ширины прибора (u), как в device.css -->
+        <svg class="plate-scheme" viewBox="-20 -3 140 178.4" aria-hidden="true" focusable="false">
+          <g class="sc-line">
+            <rect x="0" y="0" width="100" height="172.4" rx="6"/>
+            <circle cx="50" cy="52.6" r="38"/>
+            <circle cx="50" cy="52.6" r="5"/>
+            <rect x="10.2" y="99.1" width="79.6" height="41.3" rx="1.6"/>
+            <rect x="5" y="148.9" width="34.2" height="11.5" rx="1.4"/>
+            <rect x="5.8" y="149.7" width="10.4" height="9" rx="0.7"/>
+            <rect x="16.9" y="149.7" width="10.4" height="9" rx="0.7"/>
+            <rect x="28" y="149.7" width="10.4" height="9" rx="0.7"/>
+            <circle cx="50.9" cy="157.4" r="4.5"/>
+            <circle cx="68" cy="155.9" r="5.4"/>
+            <circle cx="86" cy="155.9" r="5.4"/>
+            <rect x="86" y="6" width="8" height="6.8" rx="1.2"/>
+            <circle cx="7.05" cy="17.75" r="1.05"/>
+          </g>
+          <g class="sc-detail">
+            <path d="M6 8.2h22.8M6 12.2h15"/>
+            <rect x="21.6" y="101.7" width="13.4" height="17.6" rx="0.8"/>
+            <rect x="36.1" y="101.7" width="13.4" height="17.6" rx="0.8"/>
+            <rect x="50.5" y="101.7" width="13.4" height="17.6" rx="0.8"/>
+            <rect x="65" y="101.7" width="13.4" height="17.6" rx="0.8"/>
+            <rect x="12.8" y="121.5" width="74.4" height="7.4" rx="0.45"/>
+            <rect x="12.8" y="130.4" width="26.3" height="7.4" rx="0.45"/>
+            <rect x="42.2" y="130.4" width="26.3" height="7.4" rx="0.45"/>
+            <rect x="71.6" y="130.4" width="15.6" height="7.4" rx="0.45"/>
+            <path d="M21.6 110.5h56.8M12.8 125.2h74.4M12.8 134.1h74.4"/>
+            <path d="M46.30 162A6.5 6.5 0 1 1 55.50 162M62.34 161.56A8 8 0 1 1 73.66 161.56M80.34 161.56A8 8 0 1 1 91.66 161.56"/>
+            <circle cx="50.9" cy="157.4" r="2.7"/>
+            <circle cx="68" cy="155.9" r="3.24"/>
+            <circle cx="86" cy="155.9" r="3.24"/>
+            <path d="M50.9 154.9v1.4M68 152.9v1.6M86 152.9v1.6"/>
+            <rect x="86.7" y="6.7" width="6.6" height="4.6" rx="0.7"/>
+          </g>
+          <g class="sc-glyph">
+            <path transform="translate(9.35 152.55) scale(.1375)" d="M5 4h3v16H5zM19 4 9 12l10 8z"/>
+            <path transform="translate(20.45 152.55) scale(.1375)" d="M6 4l14 8-14 8z"/>
+            <path transform="translate(31.55 152.55) scale(.1375)" d="M5 4l10 8-10 8zM16 4h3v16h-3z"/>
+          </g>
+          <g class="sc-lead">
+            <path d="M-6.5 52.6H12M-6.5 119.75H10.2M-6.5 154.2H5M106.5 167.5H91.66M46.3 165.5v2h45.36v-2M106.5 9.4H94"/>
+          </g>
+          <g class="sc-dot">
+            <circle cx="12" cy="52.6" r="1"/><circle cx="10.2" cy="119.75" r="1"/><circle cx="5" cy="154.2" r="1"/><circle cx="94" cy="9.4" r="1"/>
+          </g>
+          <g class="sc-num">
+            <circle cx="-12" cy="52.6" r="5.5"/><text x="-12" y="52.6" dy="0.36em">1</text>
+            <circle cx="-12" cy="119.75" r="5.5"/><text x="-12" y="119.75" dy="0.36em">2</text>
+            <circle cx="-12" cy="154.2" r="5.5"/><text x="-12" y="154.2" dy="0.36em">3</text>
+            <circle cx="112" cy="167.5" r="5.5"/><text x="112" y="167.5" dy="0.36em">4</text>
+            <circle cx="112" cy="9.4" r="5.5"/><text x="112" y="9.4" dy="0.36em">5</text>
+          </g>
+        </svg>
+        <ol class="plate-legend">
+          <li>Радар: самолёты рядом с аэропортом</li>
+          <li>Табло: станция и местное время. Нажми — следующая</li>
+          <li>PLAY, PREV, NEXT</li>
+          <li>SLEEP · LO-FI · ATC. На iPhone — без звука по нажатию</li>
+          <li>Эта табличка</li>
+        </ol>
         <div class="plate-foot">
-          <p>Автор — <a href="https://t.me/a_food" target="_blank" rel="noopener">Telegram</a></p>
-          <p>v3.0 · 2026</p>
+          <p>Эфир — LiveATC.net (<a href="https://www.liveatc.net/" target="_blank" rel="noopener">поддержать</a>) · Музыка — Radio Record Lo-Fi · Самолёты — adsb.lol, OpenSky · Звуки — freesound CC0</p>
+          <p>Автор — <a href="https://t.me/a_food" target="_blank" rel="noopener">Telegram</a> · v3.0 · 2026</p>
         </div>
       </div>
     </section>
