@@ -43,12 +43,13 @@ let shownTime = '';
 let sleepTimer = null;
 
 // ---- звуки интерфейса (от громкости потоков и mute не зависят) ----
-// Через Web Audio (js/ui-sounds.js) — не перехватывают «Сейчас играет» у потоков на iPhone.
-// Режим для машины (?auto, ссылка /auto/): без щелчков и без Web Audio вообще — в v2 Web Audio
-// вызывал заикания в CarPlay, поэтому там ничего лишнего.
+// На компьютере — через Web Audio (js/ui-sounds.js). На iPhone их нет совсем: короткий <audio>
+// перехватывал «Сейчас играет» (шторка и экран блокировки управляли щелчком), а Web Audio
+// прерывает поток — iOS сама ставила музыку на паузу через ~1 с после щелчка (журнал ?debug, 29.10).
+// Режим для машины (?auto, ссылка /auto/) — тоже без щелчков на любом устройстве.
 const carMode = new URLSearchParams(location.search).has('auto');
 const SILENT_SOUNDS = { knob() {}, cascade() {}, minute() {}, keyDown() {}, keyUp() {} };
-const sounds = carMode ? SILENT_SOUNDS : createUiSounds();
+const sounds = carMode || ios ? SILENT_SOUNDS : createUiSounds();
 // Табло на скрытой странице (заблокированный телефон) не звучит: клики без картинки не нужны.
 const visible = () => document.visibilityState === 'visible';
 
