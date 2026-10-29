@@ -14,6 +14,9 @@ import { createSwitcher } from './switcher.js';
 import { createPassport } from './passport.js';
 import { reducedMotion } from './motion.js';
 
+// Журнал отладки на экране (?debug): ставится раньше потоков и кнопок шторки, чтобы видеть всё.
+if (new URLSearchParams(location.search).has('debug')) (await import('./debug.js')).installDebug();
+
 const CLOCK_CHECK_MS = 5000;
 const SLEEP_FADE_MS = 8000;
 const HINT_MS = 3000;
