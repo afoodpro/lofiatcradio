@@ -125,6 +125,8 @@ export function createAudio({ ios, autoResume = true, onState = () => {}, create
     // External pause (Bluetooth/CarPlay/call): playing is still true, so resume.
     s.el.addEventListener('pause', () => {
       if (!playing) return;
+      // Живой поток закрылся сервером: это обрыв, а не пауза — переподключаемся при любом autoResume.
+      if (s.el.ended) { scheduleRetry(name); return; }
       if (!autoResume) { hardPause(); return; } // UI и экран блокировки честно показывают паузу
       setTimeout(() => {
         if (!playing || !s.el.paused) return;
@@ -167,8 +169,9 @@ export function createAudio({ ios, autoResume = true, onState = () => {}, create
     lofiEl.pause();
     atcEl.pause();
     for (const name of ['lofi', 'atc']) { clearRetry(name); streams[name].buffering = false; streams[name].attempt = 0; }
-    // Обрываем и сетевые соединения (play() заново выставит src).
-    for (const el of [lofiEl, atcEl]) { el.removeAttribute('src'); el.load?.(); }
+    // Обрываем и сетевые соединения (play() заново выставит src). Не на iOS: без src
+    // пропадают кнопки экрана блокировки и CarPlay; play() там всё равно перезагрузит поток.
+    if (!ios) for (const el of [lofiEl, atcEl]) { el.removeAttribute('src'); el.load?.(); }
     emit();
   }
 

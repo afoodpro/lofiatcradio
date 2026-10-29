@@ -1,4 +1,4 @@
-// Сборка прибора: станции и состояние → табло, катушка-радар, ручки, аудио, радар, клавиатура, Media Session.
+// Сборка прибора: станции и состояние → табло, катушка-радар, ручки, аудио, радар, клавиатура, Media Session, паспорт.
 import { loadStations, findStation, stepStation } from './stations.js';
 import { boardFields } from './board.js';
 import { createFlapRow } from './flap.js';
@@ -11,6 +11,7 @@ import { IOS_LEVELS, isIOS, lampState } from './audio-logic.js';
 import { createRadarFeed, labelFor } from './radar-data.js';
 import { DEFAULTS, loadState, saveState } from './state.js';
 import { createSwitcher } from './switcher.js';
+import { createPassport } from './passport.js';
 
 const CLOCK_CHECK_MS = 5000;
 const SLEEP_FADE_MS = 8000;
@@ -187,7 +188,18 @@ function tapSound() {
   sounds.keyDown();
   setTimeout(() => sounds.keyUp(), KEY_TAP_MS);
 }
-for (const key of [keyPrev, keyNext]) {
+// ---- паспорт изделия (оборот прибора) ----
+const passportBtn = $('passport-btn');
+const passportBackBtn = $('passport-back-btn');
+const passport = createPassport({
+  unit: $('unit'),
+  front: document.querySelector('.device'),
+  back: $('passport'),
+  button: passportBtn,
+  backButton: passportBackBtn,
+});
+
+for (const key of [keyPrev, keyNext, passportBtn, passportBackBtn]) {
   key.addEventListener('pointerdown', () => sounds.keyDown());
   key.addEventListener('pointerup', () => sounds.keyUp());
   key.addEventListener('click', (e) => { if (e.detail === 0) tapSound(); }); // Enter/Space на сфокусированной
@@ -210,6 +222,7 @@ document.addEventListener('focusin', (e) => {
 
 document.addEventListener('keydown', (e) => {
   if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey) return;
+  if (passport.isOpen()) return; // прибор развёрнут обратной стороной: клавиши деки недоступны
   const t = e.target;
   if (t instanceof Element && t.closest('.knob')) return; // ручка сама обрабатывает клавиши
   const control = t instanceof Element ? t.closest('button, a, input, textarea, select') : null;

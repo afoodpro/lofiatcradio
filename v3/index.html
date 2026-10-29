@@ -30,58 +30,85 @@
   <script type="module" src="js/app.js"></script>
 </head>
 <body>
-  <main class="device" aria-label="ATC Live Radio">
-    <div class="reel-cell">
-      <header class="brand">
-        <h1 class="title">ATC LIVE RADIO <span>WITH LO-FI</span></h1>
-        <span class="lamp" id="lamp" data-state="off" aria-hidden="true"></span>
-      </header>
-      <div class="window">
-        <canvas id="reel" role="img" aria-label="Radar around the selected airport"></canvas>
+  <div class="unit" id="unit">
+    <main class="device" aria-label="ATC Live Radio">
+      <div class="reel-cell">
+        <header class="brand">
+          <h1 class="title">ATC LIVE RADIO <span>WITH LO-FI</span></h1>
+          <span class="lamp" id="lamp" data-state="off" aria-hidden="true"></span>
+        </header>
+        <button class="passport-btn" id="passport-btn" type="button" aria-label="Passport" aria-expanded="false" aria-controls="passport"><span class="pb-bezel" aria-hidden="true"><span class="pb-cap"><i></i></span></span><span class="pb-caption" aria-hidden="true">INFO</span></button>
+        <div class="window">
+          <canvas id="reel" role="img" aria-label="Radar around the selected airport"></canvas>
+        </div>
       </div>
-    </div>
 
-    <div class="deck">
-      <button class="board" id="board" type="button" aria-label="Next station">
-        <span class="board-row row-code" id="f-code"></span>
-        <span class="board-row row-city" id="f-city"></span>
-        <span class="board-row row-info">
-          <span class="board-group" id="f-time"></span>
-          <span class="board-group" id="f-freq"></span>
-          <span class="board-group" id="f-pos"></span>
-        </span>
-      </button>
+      <div class="deck">
+        <button class="board" id="board" type="button" aria-label="Next station">
+          <span class="board-row row-code" id="f-code"></span>
+          <span class="board-row row-city" id="f-city"></span>
+          <span class="board-row row-info">
+            <span class="board-group" id="f-time"></span>
+            <span class="board-group" id="f-freq"></span>
+            <span class="board-group" id="f-pos"></span>
+          </span>
+        </button>
 
-      <div class="controls">
-        <div class="transport">
-          <div class="keys" role="group" aria-label="Transport">
-            <button class="key" id="key-prev" type="button" aria-label="Previous station">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h3v16H5zM19 4 9 12l10 8z"/></svg>
-            </button>
-            <button class="key" id="key-play" type="button" aria-label="Play" aria-pressed="false" disabled>
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4l14 8-14 8z"/></svg>
-            </button>
-            <button class="key" id="key-next" type="button" aria-label="Next station">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4l10 8-10 8zM16 4h3v16h-3z"/></svg>
-            </button>
+        <div class="controls">
+          <div class="transport">
+            <div class="keys" role="group" aria-label="Transport">
+              <button class="key" id="key-prev" type="button" aria-label="Previous station">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h3v16H5zM19 4 9 12l10 8z"/></svg>
+              </button>
+              <button class="key" id="key-play" type="button" aria-label="Play" aria-pressed="false" disabled>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4l14 8-14 8z"/></svg>
+              </button>
+              <button class="key" id="key-next" type="button" aria-label="Next station">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4l10 8-10 8zM16 4h3v16h-3z"/></svg>
+              </button>
+            </div>
+            <div class="key-labels" aria-hidden="true"><span>PREV</span><span>PLAY</span><span>NEXT</span></div>
           </div>
-          <div class="key-labels" aria-hidden="true"><span>PREV</span><span>PLAY</span><span>NEXT</span></div>
-        </div>
 
-        <div class="dials">
-          <div class="dial dial-sleep"><span class="dial-label" aria-hidden="true">SLEEP</span><div class="dial-knob" id="knob-sleep"></div></div>
-          <div class="dial"><span class="dial-label" aria-hidden="true">LO-FI</span><div class="dial-knob" id="knob-lofi"></div></div>
-          <div class="dial"><span class="dial-label" aria-hidden="true">ATC</span><div class="dial-knob" id="knob-atc"></div></div>
-          <p class="hint" id="hint" role="status"></p>
+          <div class="dials">
+            <div class="dial dial-sleep"><span class="dial-label" aria-hidden="true">SLEEP</span><div class="dial-knob" id="knob-sleep"></div></div>
+            <div class="dial"><span class="dial-label" aria-hidden="true">LO-FI</span><div class="dial-knob" id="knob-lofi"></div></div>
+            <div class="dial"><span class="dial-label" aria-hidden="true">ATC</span><div class="dial-knob" id="knob-atc"></div></div>
+            <p class="hint" id="hint" role="status"></p>
+          </div>
         </div>
       </div>
-    </div>
 
-    <a class="tg" href="https://t.me/a_food" target="_blank" rel="noopener" aria-label="Telegram">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21.4 3.6 2.9 10.8c-1 .4-1 1.8.1 2.1l4.5 1.4 1.7 5.4c.3.9 1.4 1.1 2 .4l2.5-2.4 4.6 3.4c.8.6 1.9.1 2.1-.8l3-14.6c.2-1.2-.9-2.1-2-1.7zM9.9 14.6l-.4 3.6-1.3-4.3 9.6-6.3z"/></svg>
-    </a>
+      <p class="sr-only" id="announce" aria-live="polite"></p>
+    </main>
 
-    <p class="sr-only" id="announce" aria-live="polite"></p>
-  </main>
+    <section class="device-back" id="passport" role="dialog" aria-modal="true" aria-labelledby="passport-title" lang="ru" hidden>
+      <button class="passport-btn" id="passport-back-btn" type="button" aria-label="Close passport"><span class="pb-bezel" aria-hidden="true"><span class="pb-cap"><i></i></span></span><span class="pb-caption" aria-hidden="true">BACK</span></button>
+      <div class="plate">
+        <span class="screw" aria-hidden="true"></span><span class="screw" aria-hidden="true"></span><span class="screw" aria-hidden="true"></span><span class="screw" aria-hidden="true"></span>
+        <p class="plate-model" lang="en">AR-1 · APPROACH RECORDER</p>
+        <h2 class="plate-title" id="passport-title">ПАСПОРТ ИЗДЕЛИЯ</h2>
+        <p class="plate-lead">Лофи-музыка и живой эфир авиадиспетчеров семи аэропортов мира.</p>
+        <ul class="plate-list">
+          <li>PLAY — включить / пауза</li>
+          <li>PREV, NEXT или табло — другая станция</li>
+          <li>LO-FI, ATC — громкость музыки и эфира</li>
+          <li>SLEEP — выключить через 30, 60 или 90 мин</li>
+          <li>На iPhone громкость — кнопками телефона, нажатие на ручку — без звука</li>
+          <li>Радар — самолёты рядом с аэропортом, время на табло — местное</li>
+        </ul>
+        <ul class="plate-list">
+          <li>Эфир — LiveATC.net · <a href="https://www.liveatc.net/" target="_blank" rel="noopener">поддержать</a></li>
+          <li>Музыка — laut.fm/lofi</li>
+          <li>Самолёты — adsb.lol, OpenSky Network</li>
+          <li>Звуки — freesound.org (CC0)</li>
+        </ul>
+        <div class="plate-foot">
+          <p>Автор — <a href="https://t.me/a_food" target="_blank" rel="noopener">Telegram</a></p>
+          <p>v3.0 · 2026</p>
+        </div>
+      </div>
+    </section>
+  </div>
 </body>
 </html>

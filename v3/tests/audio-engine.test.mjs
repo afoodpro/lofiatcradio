@@ -8,7 +8,7 @@ const EHAM = { code: 'EHAM', mount: 'eham_twr_18c36c' };
 function fakeEl() {
   const el = new EventTarget();
   let src = '';
-  Object.assign(el, { paused: true, muted: false, volume: 1, currentTime: 0, playCalls: 0, attrs: {} });
+  Object.assign(el, { paused: true, ended: false, muted: false, volume: 1, currentTime: 0, playCalls: 0, attrs: {} });
   Object.defineProperty(el, 'src', { get: () => src, set: (v) => { src = v; } });
   el.setAttribute = (k, v) => { el.attrs[k] = v; };
   el.removeAttribute = (k) => { if (k === 'src') src = ''; delete el.attrs[k]; };
@@ -213,6 +213,32 @@ test('hardPause сбрасывает src обоих потоков и вызыв
   api.play();
   assert.match(atc.src, /kjfk_twr\?nocache=/);
   assert.ok(lofi.src);
+});
+
+test('живой поток закрылся (ended) при autoResume: false — переподключение, а не пауза', (t) => {
+  const { api, atc, last } = setup(t, { autoResume: false });
+  api.setStation(KJFK); api.play();
+  const first = atc.src;
+  atc.ended = true;
+  atc.pause(); // браузер шлёт pause перед ended
+  assert.equal(last().playing, true);
+  t.mock.timers.tick(2000); // retryDelay(0)
+  assert.notEqual(atc.src, first);
+  assert.match(atc.src, /^https:\/\/s1-bos\.liveatc\.net\/kjfk_twr\?nocache=\d+$/);
+  assert.equal(atc.paused, false);
+});
+
+test('iOS: hardPause сохраняет src (кнопки экрана блокировки и CarPlay)', (t) => {
+  const { api, atc, lofi } = setup(t, { ios: true });
+  api.setStation(KJFK); api.play();
+  api.pause();
+  assert.notEqual(atc.src, ''); assert.notEqual(lofi.src, '');
+  assert.equal(atc.loadCalls, 0); assert.equal(lofi.loadCalls, 0);
+  const first = atc.src;
+  t.mock.timers.tick(1);
+  api.play();
+  assert.notEqual(atc.src, first); // на play — свежий nocache
+  assert.match(atc.src, /kjfk_twr\?nocache=/);
 });
 
 test('crossOrigin на лофи только вне iOS', (t) => {

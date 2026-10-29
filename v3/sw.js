@@ -1,7 +1,7 @@
 // Service worker ATC Live Radio v3. Лежит в v3/, поэтому его scope — эта папка
 // (на пробном этапе /lofiatcradio/v3/); сервис-воркер v2 в родительской папке не затрагивается.
 // CACHE нужно поднимать при каждом изменении списка SHELL.
-const CACHE = 'lofiatc-v3-3';
+const CACHE = 'lofiatc-v3-4';
 
 const SHELL = [
   './',
@@ -11,6 +11,10 @@ const SHELL = [
   'fonts/teko-latin-400-normal.woff2',
   'fonts/teko-latin-500-normal.woff2',
   'fonts/teko-latin-600-normal.woff2',
+  'fonts/oswald-cyrillic-400-normal.woff2',
+  'fonts/oswald-cyrillic-500-normal.woff2',
+  'fonts/oswald-latin-400-normal.woff2',
+  'fonts/oswald-latin-500-normal.woff2',
   'js/app.js',
   'js/audio-logic.js',
   'js/audio.js',
@@ -18,6 +22,7 @@ const SHELL = [
   'js/flap.js',
   'js/knob-math.js',
   'js/knob.js',
+  'js/passport.js',
   'js/radar-data.js',
   'js/reel-math.js',
   'js/reel.js',
