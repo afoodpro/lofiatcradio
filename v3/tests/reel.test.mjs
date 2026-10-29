@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { stepReel, blipBrightness, project, bearing, REEL_DEG_PER_SEC, SPOKES } from '../js/reel-math.js';
+import { stepReel, blipBrightness, project, bearing, layoutLabels, REEL_DEG_PER_SEC, SPOKES } from '../js/reel-math.js';
 
 test('константы катушки', () => { assert.equal(REEL_DEG_PER_SEC, 30); assert.equal(SPOKES, 3); });
 test('разгон до 30°/с', () => { let s={angle:0,speed:0}; for (let i=0;i<100;i++) s=stepReel(s,0.1,true); assert.ok(Math.abs(s.speed-30)<0.5); });
@@ -12,3 +12,5 @@ test('яркость при угле катушки меньше пеленга'
 test('проекция: север вверх, восток вправо', () => { const n=project(40,-74,40,40.5,-74); assert.ok(n.y<0&&Math.abs(n.x)<1e-9); const e=project(40,-74,40,40,-73.5); assert.ok(e.x>0); assert.equal(Math.round(bearing(e.x,e.y)),90); });
 test('за радиусом r > 1', () => assert.ok(project(40,-74,40,41,-74).r>1));
 test('пеленг: север 0, юг 180, запад 270', () => { assert.equal(bearing(0,-1),0); assert.equal(bearing(0,1),180); assert.equal(bearing(-1,0),270); });
+
+test('layoutLabels прячет наложившиеся подписи дальних', () => { const r=layoutLabels([{x:0,y:0,text:'AAL102'},{x:5,y:2,text:'DAL4'},{x:200,y:0,text:'UAL9'}],{charW:6,h:10,pad:2}); assert.deepEqual(r,[true,false,true]); });

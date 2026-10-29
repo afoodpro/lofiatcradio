@@ -9,6 +9,8 @@ const PAUSED_POLL_MS = 60000; // на паузе радар почти не ну
 const RETRY_MS = 30000;
 const TIMEOUT_MS = 10000;
 const CALL_MAX = 7;
+export const MAX_BLIPS = 12;
+export const HUB_CLEAR_R = 0.28; // в единицах r (1 = внешнее кольцо, 0.8R экрана): втулка 0.2R = r 0.25, плюс половина силуэта
 
 // Пустой экран → следующий радиус из RADII; иначе тот же. Радиус не уменьшается.
 export function nextRadius(nm, count) {
@@ -29,14 +31,16 @@ export function labelFor(status) {
   return null;
 }
 
+// Отметки внутри круга и вне втулки; не больше MAX_BLIPS ближайших к станции.
 export function toBlips(station, nm, aircraft) {
   const out = [];
   for (const a of aircraft) {
     const { x, y, r } = project(station.lat, station.lon, nm, a.lat, a.lon);
-    if (r > 1) continue;
-    out.push({ x, y, track: a.track, call: String(a.call ?? '').slice(0, CALL_MAX) });
+    if (r > 1 || r < HUB_CLEAR_R) continue;
+    out.push({ x, y, r, track: a.track, call: String(a.call ?? '').slice(0, CALL_MAX) });
   }
-  return out;
+  out.sort((p, q) => p.r - q.r);
+  return out.slice(0, MAX_BLIPS).map(({ x, y, track, call }) => ({ x, y, track, call }));
 }
 
 export function createRadarFeed({ onUpdate, fetchFn = (...args) => fetch(...args), playing: initialPlaying = true }) {

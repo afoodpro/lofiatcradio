@@ -1,7 +1,7 @@
 // Катушка-радар на Canvas 2D. Радар неподвижен (север вверху), поверх вращаются обод и три спицы с втулкой.
 // Спицы работают как развёртка: отметка вспыхивает под спицей и гаснет до следующей (blipBrightness).
 // Рисуем в круг min(width, height) по центру canvas; размер берётся из CSS-бокса (ResizeObserver).
-import { stepReel, blipBrightness, bearing, SPOKES } from './reel-math.js';
+import { stepReel, blipBrightness, bearing, layoutLabels, SPOKES } from './reel-math.js';
 
 const RIM_TEXT = 'ATC LIVE RADIO · WITH LO-FI · 7½ IPS';
 const RIM_FONT = 'Teko, sans-serif';
@@ -190,7 +190,13 @@ export function createReel(canvas) {
     ctx.font = `500 8.5px ${MONO}`;
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    for (const p of aircraft) {
+    // Подписи: от ближнего борта к дальнему, наложившиеся прячем (силуэт рисуем всегда).
+    const charW = ctx.measureText('M').width;
+    const shown = layoutLabels(
+      aircraft.map((p) => ({ x: p.x * pr + size + 3, y: p.y * pr - size * 0.6, text: p.call || '' })),
+      { charW, h: 10, pad: 2 },
+    );
+    for (const [i, p] of aircraft.entries()) {
       const x = p.x * pr, y = p.y * pr;
       const b = reduced ? REDUCED_BRIGHTNESS : blipBrightness(bearing(p.x, p.y), state.angle);
       const flash = Math.max(0, (b - 0.88) / 0.12); // короткий ореол сразу после спицы
@@ -203,7 +209,7 @@ export function createReel(canvas) {
       planePath(ctx, size);
       ctx.fill();
       ctx.restore();
-      if (p.call) {
+      if (p.call && shown[i]) {
         ctx.fillStyle = `rgba(${C.blip},${0.2 + 0.7 * b})`;
         ctx.fillText(p.call, x + size + 3, y - size * 0.6);
       }

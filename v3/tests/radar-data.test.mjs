@@ -13,7 +13,7 @@ function fakeDocument(state = 'visible') {
   };
 }
 const okRes = (aircraft) => ({ ok: true, json: async () => ({ aircraft }) });
-const plane = { hex: 'a', call: 'AAA1', lat: 55.2, lon: 82.65, track: 90 };
+const plane = { hex: 'a', call: 'AAA1', lat: 55.4, lon: 82.65, track: 90 };
 
 test('радиус растёт только при пустом экране', () => {
   assert.equal(nextRadius(40, 0), 80);
@@ -52,10 +52,10 @@ test('ответ прошлой станции игнорируется', async 
   const eham = { code: 'EHAM', lat: 52.31, lon: 4.76 };
   feed.start(kjfk);
   feed.start(eham);
-  pending.KJFK(okRes([{ hex: 'k', call: 'KJFK1', lat: 40.7, lon: -73.78, track: 0 }]));
+  pending.KJFK(okRes([{ hex: 'k', call: 'KJFK1', lat: 40.9, lon: -73.78, track: 0 }]));
   await flush();
   assert.equal(updates.length, 0);
-  pending.EHAM(okRes([{ hex: 'e', call: 'EHAM1', lat: 52.4, lon: 4.76, track: 0 }]));
+  pending.EHAM(okRes([{ hex: 'e', call: 'EHAM1', lat: 52.6, lon: 4.76, track: 0 }]));
   await flush();
   assert.equal(updates.length, 1);
   assert.equal(updates[0].blips[0].call, 'EHAM1');
@@ -203,3 +203,5 @@ test('пауза: опрос раз в 60 с, PLAY подтягивает ожи
   assert.equal(calls, 4);
   feed.stop();
 });
+
+test('toBlips: не больше 12, ближайшие, без зоны втулки', () => { const st={lat:40.64,lon:-73.78}; const ac=[]; for(let i=0;i<30;i++) ac.push({lat:40.64+0.02*(i+1),lon:-73.78,track:0,call:'A'+i}); ac.push({lat:40.641,lon:-73.78,track:0,call:'GND'}); const b=toBlips(st,40,ac); assert.equal(b.length,12); assert.ok(b.every(x=>x.call!=='GND')); for(let i=1;i<b.length;i++) assert.ok(Math.hypot(b[i].x,b[i].y)>=Math.hypot(b[i-1].x,b[i-1].y)); });

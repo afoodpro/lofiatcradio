@@ -35,3 +35,17 @@ export function project(lat0, lon0, nm, lat, lon) {
 export function bearing(x, y) {
   return mod(Math.atan2(x, -y) * 180 / Math.PI, 360);
 }
+
+// Какие подписи показывать. items — от ближнего к дальнему; (x, y) — левый край и середина по вертикали
+// прямоугольника подписи (ширина = длина текста · charW, высота h). Подпись скрывается, если с запасом pad
+// пересекает уже принятую.
+export function layoutLabels(items, { charW, h, pad }) {
+  const taken = [];
+  return items.map(({ x, y, text }) => {
+    const w = text.length * charW;
+    const box = { l: x - pad, r: x + w + pad, t: y - h / 2 - pad, b: y + h / 2 + pad };
+    const clash = taken.some((o) => box.l < o.r && o.l < box.r && box.t < o.b && o.t < box.b);
+    if (!clash) taken.push(box);
+    return !clash;
+  });
+}
