@@ -11,8 +11,10 @@ import os
 import sys
 import threading
 import time
+import urllib.error
 import urllib.parse
 import urllib.request
+from concurrent.futures import Future, ThreadPoolExecutor, wait
 from dataclasses import dataclass
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any, Callable, Dict, List, Optional, Tuple
@@ -22,11 +24,15 @@ ADSBLOL_URL = "https://api.adsb.lol/v2/point/{lat}/{lon}/{nm}"
 ADSBFI_URL = "https://opendata.adsb.fi/api/v2/lat/{lat}/lon/{lon}/dist/{nm}"
 OPENSKY_STATES_URL = "https://opensky-network.org/api/states/all"
 OPENSKY_TOKEN_URL = "https://auth.opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token"
-UPSTREAM_TIMEOUT = 5  # клиент ждёт 10 с; два последовательных запроса adsb укладываются
+ADSB_ATTEMPT_TIMEOUT = 3  # на каждую попытку (lol, затем fi): 3 + 3 < DEADLINE
+OPENSKY_ATTEMPT_TIMEOUT = 4  # на токен и на запрос по отдельности
+DEADLINE = 7  # общий дедлайн ответа; клиент сдаётся на 10 с
 RADII = (40, 80, 150, 250)
 DEFAULT_ORIGINS = "https://afoodpro.github.io,http://localhost:8080"
 ADSB_TTL = 5
 OPENSKY_TTL = 15
+ADSB_FAIL_TTL = 5
+OPENSKY_FAIL_TTL = 20
 TOKEN_MARGIN = 60
 TOKEN_RETRY_BACKOFF = 30
 
@@ -60,6 +66,8 @@ def _num(v: Any) -> Optional[float]:
 def normalize_adsblol(obj: Any) -> List[Aircraft]:
     out: List[Aircraft] = []
     for a in (obj or {}).get("ac") or []:
+        if not isinstance(a, dict):
+            continue
         lat, lon = _num(a.get("lat")), _num(a.get("lon"))
         if lat is None or lon is None or not a.get("hex"):
             continue
@@ -76,6 +84,8 @@ def normalize_adsblol(obj: Any) -> List[Aircraft]:
 def normalize_opensky(obj: Any) -> List[Aircraft]:
     out: List[Aircraft] = []
     for s in (obj or {}).get("states") or []:
+        if not isinstance(s, list) or len(s) <= 10:
+            continue
         lat, lon = _num(s[6]), _num(s[5])
         if lat is None or lon is None or not s[0]:
             continue
@@ -84,7 +94,7 @@ def normalize_opensky(obj: Any) -> List[Aircraft]:
             "call": str(s[1] or "").strip(),
             "lat": lat,
             "lon": lon,
-            "track": _num(s[10]) if len(s) > 10 else None,
+            "track": _num(s[10]),
         })
     return out
 
@@ -106,29 +116,30 @@ class TTLCache:
             hit = self._data.get(key)
             if hit is None:
                 return None
-            if self._clock() - hit[0] >= self._ttl:
+            if self._clock() >= hit[0]:
                 del self._data[key]
                 return None
             return hit[1]
 
-    def put(self, key: Any, value: Any) -> None:
+    def put(self, key: Any, value: Any, ttl_sec: Optional[float] = None) -> None:
         with self._lock:
-            self._data[key] = (self._clock(), value)
+            self._data[key] = (self._clock() + (self._ttl if ttl_sec is None else ttl_sec), value)
 
 
 # ---------- сеть ----------
 
-def _http_json(url: str, headers: Optional[Dict[str, str]] = None, data: Optional[bytes] = None) -> Any:
+def _http_json(url: str, timeout: float, headers: Optional[Dict[str, str]] = None, data: Optional[bytes] = None) -> Any:
     h = {"User-Agent": USER_AGENT, "Accept": "application/json"}
     h.update(headers or {})
     req = urllib.request.Request(url, data=data, headers=h)
-    with urllib.request.urlopen(req, timeout=UPSTREAM_TIMEOUT) as resp:
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
         return json.loads(resp.read().decode("utf-8"))
 
 
 def _post_form(url: str, form: Dict[str, str]) -> Any:
     return _http_json(
         url,
+        OPENSKY_ATTEMPT_TIMEOUT,
         headers={"Content-Type": "application/x-www-form-urlencoded"},
         data=urllib.parse.urlencode(form).encode("ascii"),
     )
@@ -137,18 +148,22 @@ def _post_form(url: str, form: Dict[str, str]) -> Any:
 def fetch_adsb(lat: float, lon: float, nm: int) -> List[Aircraft]:
     """adsb.lol, при сбое — adsb.fi. Бросает исключение, если упали оба."""
     try:
-        return normalize_adsblol(_http_json(ADSBLOL_URL.format(lat=lat, lon=lon, nm=nm)))
+        return normalize_adsblol(_http_json(ADSBLOL_URL.format(lat=lat, lon=lon, nm=nm), ADSB_ATTEMPT_TIMEOUT))
     except Exception:
-        return normalize_adsblol(_http_json(ADSBFI_URL.format(lat=lat, lon=lon, nm=nm)))
+        return normalize_adsblol(_http_json(ADSBFI_URL.format(lat=lat, lon=lon, nm=nm), ADSB_ATTEMPT_TIMEOUT))
 
 
 def fetch_opensky(box: Tuple[float, float, float, float], token: str) -> List[Aircraft]:
     q = urllib.parse.urlencode(dict(zip(("lamin", "lomin", "lamax", "lomax"), ("%.4f" % v for v in box))))
-    return normalize_opensky(_http_json(OPENSKY_STATES_URL + "?" + q, headers={"Authorization": "Bearer " + token}))
+    return normalize_opensky(_http_json(OPENSKY_STATES_URL + "?" + q, OPENSKY_ATTEMPT_TIMEOUT,
+                                        headers={"Authorization": "Bearer " + token}))
 
 
 class OpenSkyAuth:
-    """OAuth2 client credentials. Нет файла/ошибка -> token() is None (работаем только на adsb)."""
+    """OAuth2 client credentials. Нет файла/ошибка -> token() is None (работаем только на adsb).
+
+    Обновление идёт вне лока (один обновляющий), пока старый токен годен — отдаём его.
+    """
 
     def __init__(self, creds_path: str, post: Callable[[str, Dict[str, str]], Any] = _post_form,
                  clock: Callable[[], float] = time.monotonic):
@@ -156,32 +171,71 @@ class OpenSkyAuth:
         self._post = post
         self._clock = clock
         self._token: Optional[str] = None
-        self._valid_until = 0.0
+        self._expires_at = 0.0  # токен ещё годен
+        self._refresh_at = 0.0  # пора обновлять
+        self._retry_at = 0.0  # после сбоя не ходим до этого момента
+        self._refreshing: Optional[threading.Event] = None
         self._lock = threading.Lock()
+
+    def invalidate(self) -> None:
+        """OpenSky ответил 401: забыть токен, следующий вызов обновит."""
+        with self._lock:
+            self._token = None
+            self._expires_at = self._refresh_at = self._retry_at = 0.0
+
+    def _usable(self, now: float) -> Optional[str]:
+        return self._token if self._token and now < self._expires_at else None
 
     def token(self) -> Optional[str]:
         with self._lock:
             now = self._clock()
-            if now < self._valid_until:
+            if self._usable(now) and now < self._refresh_at:
                 return self._token
-            self._token = None
-            try:
-                with open(self._path, encoding="utf-8") as f:
-                    creds = json.load(f)
-                res = self._post(OPENSKY_TOKEN_URL, {
-                    "grant_type": "client_credentials",
-                    "client_id": creds["clientId"],
-                    "client_secret": creds["clientSecret"],
-                })
-                self._token = str(res["access_token"])
-                self._valid_until = now + float(res.get("expires_in", 1800)) - TOKEN_MARGIN
-            except Exception:
-                # не логируем детали: исключение может нести тело запроса
-                self._valid_until = now + TOKEN_RETRY_BACKOFF
-            return self._token
+            if self._refreshing is not None:
+                waiter: Optional[threading.Event] = self._refreshing
+            elif now < self._retry_at:
+                return self._usable(now)
+            else:
+                waiter = None
+                self._refreshing = done = threading.Event()
+            old = self._usable(now)
+        if waiter is not None:
+            if old:
+                return old
+            waiter.wait(OPENSKY_ATTEMPT_TIMEOUT * 2)
+            with self._lock:
+                return self._usable(self._clock())
+        try:
+            with open(self._path, encoding="utf-8") as f:
+                creds = json.load(f)
+            res = self._post(OPENSKY_TOKEN_URL, {
+                "grant_type": "client_credentials",
+                "client_id": creds["clientId"],
+                "client_secret": creds["clientSecret"],
+            })
+            tok, ttl = str(res["access_token"]), float(res.get("expires_in", 1800))
+            ok = True
+        except Exception:
+            # детали не логируем: исключение может нести тело запроса
+            tok, ttl, ok = None, 0.0, False
+        with self._lock:
+            now = self._clock()
+            if ok:
+                self._token = tok
+                self._expires_at = now + ttl
+                self._refresh_at = now + ttl - TOKEN_MARGIN
+            else:
+                self._retry_at = now + TOKEN_RETRY_BACKOFF
+            self._refreshing = None
+            result = self._usable(now)
+        done.set()
+        return result
 
 
 # ---------- логика ----------
+
+_EXECUTOR = ThreadPoolExecutor(max_workers=16, thread_name_prefix="radar-src")
+
 
 @dataclass
 class Deps:
@@ -192,10 +246,52 @@ class Deps:
     auth: Any
     clock: Callable[[], float] = time.monotonic
     wall: Callable[[], float] = time.time
+    deadline: float = DEADLINE
 
     def __post_init__(self) -> None:
-        self.adsb_cache = TTLCache(ADSB_TTL, self.clock)
-        self.opensky_cache = TTLCache(OPENSKY_TTL, self.clock)
+        self.caches = {
+            "adsb": TTLCache(ADSB_TTL, self.clock),
+            "opensky": TTLCache(OPENSKY_TTL, self.clock),
+        }
+        self.fail_ttl = {"adsb": ADSB_FAIL_TTL, "opensky": OPENSKY_FAIL_TTL}
+        self._lock = threading.Lock()
+        self._inflight: Dict[Tuple[str, Any], Future] = {}
+
+    def source(self, name: str, key: Any, job: Callable[[], List[Aircraft]]) -> Future:
+        """Кеш (успех/отказ) -> уже летящий запрос -> новый запрос. Один запрос на (источник, ключ)."""
+        cache = self.caches[name]
+        with self._lock:
+            hit = cache.get(key)
+            if hit is not None:
+                fut: Future = Future()
+                if hit[0]:
+                    fut.set_result(hit[1])
+                else:
+                    fut.set_exception(RuntimeError("cached failure"))
+                return fut
+            running = self._inflight.get((name, key))
+            if running is not None:
+                return running
+            fut = Future()
+            self._inflight[(name, key)] = fut
+        _EXECUTOR.submit(self._run, name, key, job, fut)
+        return fut
+
+    def _run(self, name: str, key: Any, job: Callable[[], List[Aircraft]], fut: Future) -> None:
+        try:
+            value = job()
+            err: Optional[BaseException] = None
+        except BaseException as e:  # noqa: BLE001
+            value, err = None, e
+        with self._lock:
+            # кеш пополняем до снятия из inflight и до resolve: промаха между ними нет
+            self.caches[name].put(key, (True, value) if err is None else (False, None),
+                                  None if err is None else self.fail_ttl[name])
+            self._inflight.pop((name, key), None)
+        if err is None:
+            fut.set_result(value)
+        else:
+            fut.set_exception(err)
 
 
 def _respond(status: int, payload: Any, origin: Optional[str], deps: Deps, extra: Optional[Dict[str, str]] = None):
@@ -232,25 +328,28 @@ def handle(path_qs: str, origin: Optional[str], deps: Deps, info: Optional[Dict[
     lat0, lon0 = deps.stations[code]
     key = (code, nm)
 
-    adsb = deps.adsb_cache.get(key)
-    if adsb is None:
-        try:
-            adsb = deps.fetch_adsb(lat0, lon0, nm)
-            deps.adsb_cache.put(key, adsb)
-        except Exception:
-            adsb = None
+    def adsb_job() -> List[Aircraft]:
+        return deps.fetch_adsb(lat0, lon0, nm)
 
-    osky = deps.opensky_cache.get(key)
-    if osky is None:
+    def opensky_job() -> List[Aircraft]:
         token = deps.auth.token()
-        if token:
-            try:
-                raw = deps.fetch_opensky(bbox(lat0, lon0, nm), token)
-                osky = [a for a in raw if within(lat0, lon0, nm, a["lat"], a["lon"])]
-                deps.opensky_cache.put(key, osky)
-            except Exception:
-                osky = None
+        if not token:
+            raise RuntimeError("no opensky token")
+        try:
+            raw = deps.fetch_opensky(bbox(lat0, lon0, nm), token)
+        except urllib.error.HTTPError as e:
+            if e.code == 401:
+                deps.auth.invalidate()
+            raise
+        return [a for a in raw if within(lat0, lon0, nm, a["lat"], a["lon"])]
 
+    futs = {"adsb": deps.source("adsb", key, adsb_job), "opensky": deps.source("opensky", key, opensky_job)}
+    wait(list(futs.values()), timeout=deps.deadline)
+    # не успевшие к дедлайну считаются отсутствующими; их запрос доработает и заполнит кеш
+    res: Dict[str, Optional[List[Aircraft]]] = {
+        n: (f.result() if f.done() and f.exception() is None else None) for n, f in futs.items()
+    }
+    adsb, osky = res["adsb"], res["opensky"]
     info["adsb"] = None if adsb is None else len(adsb)
     info["opensky"] = None if osky is None else len(osky)
     if adsb is None and osky is None:
@@ -266,6 +365,7 @@ def handle(path_qs: str, origin: Optional[str], deps: Deps, info: Optional[Dict[
 def make_handler(deps: Deps):
     class Handler(BaseHTTPRequestHandler):
         server_version = "lofiatc-radar"
+        timeout = 10
 
         def do_GET(self) -> None:  # noqa: N802
             t0 = time.monotonic()
@@ -279,7 +379,10 @@ def make_handler(deps: Deps):
                 self.send_header(k, v)
             self.send_header("Content-Length", str(len(body)))
             self.end_headers()
-            self.wfile.write(body)
+            try:
+                self.wfile.write(body)
+            except (BrokenPipeError, ConnectionResetError):
+                pass
             ms = int((time.monotonic() - t0) * 1000)
             extra = " adsb=%s opensky=%s" % (info.get("adsb"), info.get("opensky")) if info else ""
             sys.stderr.write("GET %s %d %dms%s\n" % (self.path, status, ms, extra))
@@ -294,7 +397,10 @@ def main() -> None:
     here = os.path.dirname(os.path.abspath(__file__))
     stations = load_stations(os.environ.get("STATIONS_PATH", os.path.join(here, "stations.json")))
     origins = {o.strip() for o in os.environ.get("ALLOWED_ORIGINS", DEFAULT_ORIGINS).split(",") if o.strip()}
-    creds = os.path.expanduser(os.environ.get("OPENSKY_CREDS", "/etc/lofiatc/opensky.json"))
+    creds = os.environ.get("OPENSKY_CREDS")
+    if not creds and os.environ.get("CREDENTIALS_DIRECTORY"):  # systemd LoadCredential
+        creds = os.path.join(os.environ["CREDENTIALS_DIRECTORY"], "opensky.json")
+    creds = os.path.expanduser(creds or "/etc/lofiatc/opensky.json")
     deps = Deps(stations=stations, allowed_origins=origins, fetch_adsb=fetch_adsb,
                 fetch_opensky=fetch_opensky, auth=OpenSkyAuth(creds))
     server = ThreadingHTTPServer(("127.0.0.1", 8787), make_handler(deps))

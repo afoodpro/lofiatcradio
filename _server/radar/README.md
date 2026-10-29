@@ -35,4 +35,4 @@ adsb.lol (резерв adsb.fi) + OpenSky, дедуп по `hex`, приорит
 
 ## systemd
 
-`lofiatc-radar.service`: код и `stations.json` в `/opt/lofiatc-radar/`, ключи в `/etc/lofiatc/opensky.json` (подключаются через `LoadCredential`).
+`lofiatc-radar.service`: код и `stations.json` в `/opt/lofiatc-radar/`, ключи в `/etc/lofiatc/opensky.json` (подключаются через `LoadCredential`; скрипт берёт путь из `$CREDENTIALS_DIRECTORY`, если `OPENSKY_CREDS` не задан).

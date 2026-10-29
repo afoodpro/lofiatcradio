@@ -3,7 +3,11 @@ from __future__ import annotations
 import json
 import os
 import tempfile
+import threading
+import time
 import unittest
+import urllib.error
+from unittest import mock
 
 import radar_proxy as rp
 
@@ -229,6 +233,193 @@ class AuthTests(unittest.TestCase):
 
         auth = rp.OpenSkyAuth(self._creds(), post=post, clock=Clock())
         self.assertIsNone(auth.token())
+
+
+def raw_deps(fetch_adsb, fetch_opensky, auth=None, deadline=7):
+    class Auth:
+        def __init__(self):
+            self.invalidated = 0
+
+        def token(self):
+            return "tok"
+
+        def invalidate(self):
+            self.invalidated += 1
+
+    return rp.Deps(stations=STATIONS, allowed_origins={ORIGIN}, fetch_adsb=fetch_adsb,
+                   fetch_opensky=fetch_opensky, auth=auth or Auth(), wall=lambda: 1, deadline=deadline)
+
+
+class ResilienceTests(unittest.TestCase):
+    def test_hung_upstream_still_200_within_deadline(self):
+        release = threading.Event()
+        self.addCleanup(release.set)
+
+        def hung(box, tok):
+            release.wait(5)
+            return []
+
+        deps = raw_deps(lambda a, b, c: [ac("aaa111")], hung, deadline=0.3)
+        t0 = time.monotonic()
+        status, _, body = get(deps)
+        self.assertLess(time.monotonic() - t0, 2)
+        self.assertEqual(status, 200)
+        self.assertEqual([a["hex"] for a in json.loads(body)["aircraft"]], ["aaa111"])
+
+    def test_abandoned_future_fills_cache(self):
+        release = threading.Event()
+        calls = []
+
+        def slow(box, tok):
+            calls.append(1)
+            release.wait(5)
+            return [ac("bbb222", lat=55.0, lon=82.6)]
+
+        deps = raw_deps(lambda a, b, c: [], slow, deadline=0.2)
+        get(deps)
+        release.set()
+        for _ in range(100):
+            time.sleep(0.02)
+            if deps.caches["opensky"].get(("UNNT", 80)):
+                break
+        data = json.loads(get(deps)[2])
+        self.assertEqual(len(calls), 1)
+        self.assertEqual([a["hex"] for a in data["aircraft"]], ["bbb222"])
+
+    def test_failure_negatively_cached(self):
+        deps, calls, clock = make_deps(adsb=[], opensky=None)
+        get(deps)
+        clock.t += 10
+        get(deps)
+        self.assertEqual(calls["opensky"], 1)  # отказ OpenSky помнится 20 с
+        clock.t += 11
+        get(deps)
+        self.assertEqual(calls["opensky"], 2)
+        self.assertEqual(calls["adsb"], 3)  # успех adsb держится 5 с: вызовы на t=0, 10, 21
+
+    def test_adsb_failure_negatively_cached_5s(self):
+        deps, calls, clock = make_deps(adsb=None, opensky=[ac("a1")])
+        get(deps)
+        clock.t += 3
+        get(deps)
+        self.assertEqual(calls["adsb"], 1)
+        clock.t += 3
+        get(deps)
+        self.assertEqual(calls["adsb"], 2)
+
+    def test_single_flight_concurrent_same_key(self):
+        release = threading.Event()
+        count = []
+
+        def adsb(lat, lon, nm):
+            count.append(1)
+            release.wait(2)
+            return []
+
+        deps = raw_deps(adsb, lambda b, t: [])
+        results = []
+        threads = [threading.Thread(target=lambda: results.append(get(deps)[0])) for _ in range(2)]
+        for t in threads:
+            t.start()
+        time.sleep(0.2)
+        release.set()
+        for t in threads:
+            t.join(3)
+        self.assertEqual(results, [200, 200])
+        self.assertEqual(len(count), 1)
+
+    def test_adsblol_to_adsbfi_fallback(self):
+        urls = []
+
+        def fake(url, timeout, headers=None, data=None):
+            urls.append(url)
+            if "adsb.lol" in url:
+                raise OSError("lol down")
+            return {"ac": [{"hex": "ABC", "lat": 1.0, "lon": 2.0}]}
+
+        with mock.patch.object(rp, "_http_json", fake):
+            out = rp.fetch_adsb(55.0, 82.0, 80)
+        self.assertEqual([a["hex"] for a in out], ["abc"])
+        self.assertIn("adsb.lol", urls[0])
+        self.assertIn("opendata.adsb.fi", urls[1])
+
+    def test_opensky_401_invalidates_token(self):
+        def boom(box, tok):
+            raise urllib.error.HTTPError("u", 401, "unauth", {}, None)
+
+        deps = raw_deps(lambda a, b, c: [], boom)
+        self.assertEqual(get(deps)[0], 200)
+        self.assertEqual(deps.auth.invalidated, 1)
+
+    def test_normalizers_skip_garbage_rows(self):
+        self.assertEqual(rp.normalize_adsblol({"ac": ["x", None, 5]}), [])
+        self.assertEqual(rp.normalize_opensky({"states": [None, "x", [1, 2, 3]]}), [])
+
+
+class AuthConcurrencyTests(unittest.TestCase):
+    def _creds(self):
+        f = tempfile.NamedTemporaryFile("w", suffix=".json", delete=False)
+        json.dump({"clientId": "id", "clientSecret": "secret"}, f)
+        f.close()
+        self.addCleanup(os.remove, f.name)
+        return f.name
+
+    def test_refresh_does_not_block_request_using_old_token(self):
+        clock = Clock()
+        gate = threading.Event()
+        started = threading.Event()
+        n = []
+
+        def post(url, form):
+            n.append(1)
+            if len(n) == 1:
+                return {"access_token": "old", "expires_in": 1800}
+            started.set()
+            gate.wait(3)
+            return {"access_token": "new", "expires_in": 1800}
+
+        auth = rp.OpenSkyAuth(self._creds(), post=post, clock=clock)
+        self.assertEqual(auth.token(), "old")
+        clock.t += 1750  # пора обновлять, старый ещё годен
+        refresher = threading.Thread(target=auth.token)
+        refresher.start()
+        self.assertTrue(started.wait(2))
+        t0 = time.monotonic()
+        self.assertEqual(auth.token(), "old")
+        self.assertLess(time.monotonic() - t0, 0.5)
+        gate.set()
+        refresher.join(3)
+        self.assertEqual(auth.token(), "new")
+
+    def test_failed_refresh_keeps_old_token(self):
+        clock = Clock()
+        n = []
+
+        def post(url, form):
+            n.append(1)
+            if len(n) == 1:
+                return {"access_token": "old", "expires_in": 1800}
+            raise OSError("down")
+
+        auth = rp.OpenSkyAuth(self._creds(), post=post, clock=clock)
+        auth.token()
+        clock.t += 1750
+        self.assertEqual(auth.token(), "old")
+        self.assertEqual(auth.token(), "old")
+        self.assertEqual(len(n), 2)  # повторно не долбим (backoff)
+
+    def test_invalidate_forces_refresh(self):
+        clock = Clock()
+        n = []
+
+        def post(url, form):
+            n.append(1)
+            return {"access_token": "t%d" % len(n), "expires_in": 1800}
+
+        auth = rp.OpenSkyAuth(self._creds(), post=post, clock=clock)
+        self.assertEqual(auth.token(), "t1")
+        auth.invalidate()
+        self.assertEqual(auth.token(), "t2")
 
 
 if __name__ == "__main__":
